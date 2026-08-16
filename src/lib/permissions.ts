@@ -1,0 +1,48 @@
+import { UserRole, Permission, ModuleName } from '@/src/types';
+
+export const ROLE_PERMISSIONS: Record<UserRole, Partial<Record<ModuleName, Permission[]>>> = {
+  SUPERADMIN: {
+    ADMIN_PANEL: ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'MANAGE', 'CONFIGURE'],
+    ADMINISTRATIVE: ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'MANAGE', 'CONFIGURE'],
+    STRATEGY: ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'MANAGE'],
+    TERRITORY: ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'MANAGE'],
+    CRM: ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'MANAGE'],
+    ELECTORAL: ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'MANAGE'],
+    SETTINGS: ['VIEW', 'EDIT', 'CONFIGURE'],
+  },
+  ADMIN_CLIENTE: {
+    ADMINISTRATIVE: ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'MANAGE'],
+    STRATEGY: ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'MANAGE'],
+    TERRITORY: ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'MANAGE'],
+    CRM: ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'MANAGE'],
+    ELECTORAL: ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'MANAGE'],
+    SETTINGS: ['VIEW', 'EDIT', 'CONFIGURE'],
+  },
+  DIRECTOR: {
+    ADMINISTRATIVE: ['VIEW', 'CREATE', 'EDIT', 'MANAGE'],
+    STRATEGY: ['VIEW', 'CREATE', 'EDIT', 'MANAGE'],
+    TERRITORY: ['VIEW', 'CREATE', 'EDIT', 'MANAGE'],
+    CRM: ['VIEW', 'CREATE', 'EDIT', 'MANAGE'],
+    ELECTORAL: ['VIEW', 'CREATE', 'EDIT', 'MANAGE'],
+    SETTINGS: ['VIEW'],
+  },
+  COORDINADOR: {
+    ADMINISTRATIVE: ['VIEW'],
+    STRATEGY: ['VIEW'],
+    TERRITORY: ['VIEW', 'CREATE', 'EDIT'],
+    CRM: ['VIEW', 'CREATE', 'EDIT'],
+    ELECTORAL: ['VIEW', 'CREATE'],
+  },
+  USUARIO: {
+    ADMINISTRATIVE: ['VIEW'],
+    STRATEGY: ['VIEW'],
+    TERRITORY: ['VIEW'],
+    CRM: ['VIEW'],
+    ELECTORAL: ['VIEW'],
+  },
+  USUARIO_LIMITADO: {
+    ADMINISTRATIVE: ['VIEW'],
+    TERRITORY: ['VIEW'],
+    CRM: ['VIEW'],
+  },
+};

@@ -1,0 +1,8 @@
+{
+  "name": "Software Electoral",
+  "description": "Plataforma premium para la gestión estratégica, territorial y administrativa de campañas electorales de alto nivel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
