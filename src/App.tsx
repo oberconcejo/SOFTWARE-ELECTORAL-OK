@@ -32,6 +32,7 @@ import AdminApiUsagePage from '@/src/pages/administrative/AdminApiUsagePage';
 import StrategyPollingPlaceLookupPage from '@/src/pages/strategy/StrategyPollingPlaceLookupPage';
 import TerritoryPollingPlaceLookupPage from '@/src/pages/territory/TerritoryPollingPlaceLookupPage';
 import PollingPlaceLookupPage from '@/src/pages/PollingPlaceLookupPage';
+import NotFoundPage from '@/src/pages/NotFoundPage';
 import { ProtectedRoute } from '@/src/components/auth/ProtectedRoute';
 import { UserRole } from '@/src/types';
 
@@ -156,7 +157,7 @@ export default function App() {
         </Route>
         
         {/* General Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </AnimatePresence>
   );

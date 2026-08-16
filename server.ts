@@ -246,17 +246,17 @@ async function startServer() {
     const authHeader = req.headers.authorization;
 
     if (!supabaseAdmin) {
-      return res.status(500).json({ error: "Supabase Admin not configured" });
+      return res.status(500).json({ error: "El servicio de administración de base de datos no está configurado." });
     }
 
     try {
       // SECURITY LAYER 1: Verify the requester's JWT
-      if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+      if (!authHeader) return res.status(401).json({ error: "No autorizado. Debe iniciar sesión para continuar." });
       const token = authHeader.replace('Bearer ', '');
       const { data: { user: requester }, error: verifyError } = await supabaseAdmin.auth.getUser(token);
       
       if (verifyError || !requester) {
-        return res.status(401).json({ error: "Invalid session" });
+        return res.status(401).json({ error: "Sesión inválida o expirada. Inicie sesión nuevamente." });
       }
 
       // SECURITY LAYER 2: Fetch requester's profile to verify role and client
@@ -267,7 +267,7 @@ async function startServer() {
         .single();
 
       if (profileFetchError || !requesterProfile) {
-        return res.status(403).json({ error: "Could not verify permissions" });
+        return res.status(403).json({ error: "No fue posible verificar los permisos de usuario." });
       }
 
       // SECURITY LAYER 3: Privilege Checks
@@ -275,21 +275,18 @@ async function startServer() {
       const isClientAdmin = requesterProfile.role === 'ADMIN_CLIENTE';
 
       if (!isSuperAdmin && !isClientAdmin) {
-        return res.status(403).json({ error: "Insufficient permissions" });
+        return res.status(403).json({ error: "Permisos insuficientes para realizar esta acción." });
       }
 
       // ClientAdmins can only create users for THEIR client
       if (isClientAdmin && requesterProfile.client_id !== profile.clientId) {
-        return res.status(403).json({ error: "Cross-tenant creation prohibited" });
+        return res.status(403).json({ error: "No está permitido crear usuarios para otra organización." });
       }
 
       // Prevent Privilege Escalation
       if (isClientAdmin && (profile.role === 'SUPERADMIN' || profile.role === 'ADMIN_CLIENTE')) {
-        // Client admins cannot create other admins (or superadmins)
-        // Adjust logic based on business rules; here we allow ClientAdmin to create others if needed
-        // but typically they shouldn't be able to create SuperAdmins.
         if (profile.role === 'SUPERADMIN') {
-          return res.status(403).json({ error: "Cannot escalate to SuperAdmin" });
+          return res.status(403).json({ error: "No tiene permisos para asignar el rol de SuperAdministrador." });
         }
       }
 
@@ -356,20 +353,20 @@ async function startServer() {
     const authHeader = req.headers.authorization;
 
     if (!supabaseAdmin) {
-      return res.status(500).json({ error: "Supabase Admin not configured" });
+      return res.status(500).json({ error: "El servicio de administración de base de datos no está configurado." });
     }
 
     try {
       // 1. SECURITY: Verify SuperAdmin
-      if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+      if (!authHeader) return res.status(401).json({ error: "No autorizado. Debe iniciar sesión para continuar." });
       const token = authHeader.replace('Bearer ', '');
       const { data: { user: requester }, error: verifyError } = await supabaseAdmin.auth.getUser(token);
       
-      if (verifyError || !requester) return res.status(401).json({ error: "Invalid session" });
+      if (verifyError || !requester) return res.status(401).json({ error: "Sesión inválida o expirada. Inicie sesión nuevamente." });
 
       const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', requester.id).single();
       if (!profile || profile.role !== 'SUPERADMIN') {
-        return res.status(403).json({ error: "Only SuperAdmin can create clients" });
+        return res.status(403).json({ error: "Solo los SuperAdministradores pueden registrar nuevas organizaciones." });
       }
 
       // 2. Create Client Record
@@ -435,16 +432,16 @@ async function startServer() {
   // API Route for getting all clients' usage (SuperAdmin only)
   app.get("/api/admin/client-usage", async (req, res) => {
     const authHeader = req.headers.authorization;
-    if (!supabaseAdmin) return res.status(500).json({ error: "Supabase not configured" });
+    if (!supabaseAdmin) return res.status(500).json({ error: "El servicio de base de datos no está configurado." });
 
     try {
-      if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+      if (!authHeader) return res.status(401).json({ error: "No autorizado. Debe iniciar sesión para continuar." });
       const token = authHeader.replace('Bearer ', '');
       const { data: { user }, error: verifyError } = await supabaseAdmin.auth.getUser(token);
-      if (verifyError || !user) return res.status(401).json({ error: "Invalid session" });
+      if (verifyError || !user) return res.status(401).json({ error: "Sesión inválida o expirada. Inicie sesión nuevamente." });
 
       const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', user.id).single();
-      if (!profile || profile.role !== 'SUPERADMIN') return res.status(403).json({ error: "Only SuperAdmin can view all usage" });
+      if (!profile || profile.role !== 'SUPERADMIN') return res.status(403).json({ error: "Solo los SuperAdministradores pueden visualizar el consumo global." });
 
       // Fetch all clients and join with their usage
       const { data: clients, error: clientsError } = await supabaseAdmin
@@ -475,16 +472,16 @@ async function startServer() {
     const { amount, type, details } = req.body; // type: ASIGNACION, AJUSTE, DEVOLUCION
     const authHeader = req.headers.authorization;
 
-    if (!supabaseAdmin) return res.status(500).json({ error: "Supabase not configured" });
+    if (!supabaseAdmin) return res.status(500).json({ error: "El servicio de base de datos no está configurado." });
 
     try {
-      if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+      if (!authHeader) return res.status(401).json({ error: "No autorizado. Debe iniciar sesión para continuar." });
       const token = authHeader.replace('Bearer ', '');
       const { data: { user }, error: verifyError } = await supabaseAdmin.auth.getUser(token);
-      if (verifyError || !user) return res.status(401).json({ error: "Invalid session" });
+      if (verifyError || !user) return res.status(401).json({ error: "Sesión inválida o expirada. Inicie sesión nuevamente." });
 
       const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', user.id).single();
-      if (!profile || profile.role !== 'SUPERADMIN') return res.status(403).json({ error: "Only SuperAdmin can adjust limits" });
+      if (!profile || profile.role !== 'SUPERADMIN') return res.status(403).json({ error: "Solo los SuperAdministradores pueden ajustar límites de consumo." });
 
       // Get current usage
       let { data: usage, error: usageError } = await supabaseAdmin
@@ -544,16 +541,16 @@ async function startServer() {
     const { clientId } = req.params;
     const authHeader = req.headers.authorization;
 
-    if (!supabaseAdmin) return res.status(500).json({ error: "Supabase not configured" });
+    if (!supabaseAdmin) return res.status(500).json({ error: "El servicio de base de datos no está configurado." });
 
     try {
-      if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+      if (!authHeader) return res.status(401).json({ error: "No autorizado. Debe iniciar sesión para continuar." });
       const token = authHeader.replace('Bearer ', '');
       const { data: { user }, error: verifyError } = await supabaseAdmin.auth.getUser(token);
-      if (verifyError || !user) return res.status(401).json({ error: "Invalid session" });
+      if (verifyError || !user) return res.status(401).json({ error: "Sesión inválida o expirada. Inicie sesión nuevamente." });
 
       const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', user.id).single();
-      if (!profile || profile.role !== 'SUPERADMIN') return res.status(403).json({ error: "Only SuperAdmin can view transactions" });
+      if (!profile || profile.role !== 'SUPERADMIN') return res.status(403).json({ error: "Solo los SuperAdministradores pueden ver el historial de transacciones." });
 
       const { data: transactions, error: transError } = await supabaseAdmin
         .from('api_usage_transactions')
