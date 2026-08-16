@@ -83,29 +83,27 @@ export default function App() {
         {/* Private Admin Login (Hidden from public) */}
         <Route path="/admin/login" element={<AdminLoginPage />} />
         
-        {/* Protected SuperAdmin Routes - Accessible ONLY at /admin */}
+        {/* Protected SuperAdmin Routes - Accessible at /admin */}
         <Route 
-          path="/admin/*" 
+          path="/admin" 
           element={
             <ProtectedRoute allowedRoles={[UserRole.SUPERADMIN]}>
-              <AdminLayout>
-                <Routes>
-                  <Route index element={<AdminDashboardPage />} />
-                  <Route path="dashboard" element={<AdminDashboardPage />} />
-                  <Route path="clients" element={<AdminClientsPage />} />
-                  <Route path="users" element={<div className="p-8 text-white">Gestión de Usuarios Globales (Próximamente)</div>} />
-                  <Route path="plans" element={<div className="p-8 text-white">Planes y Licencias (Próximamente)</div>} />
-                  <Route path="modules" element={<div className="p-8 text-white">Módulos y Funciones (Próximamente)</div>} />
-                  <Route path="rbac" element={<div className="p-8 text-white">Roles y Permisos Globales (Próximamente)</div>} />
-                  <Route path="audit" element={<div className="p-8 text-white">Auditoría Global (Próximamente)</div>} />
-                  <Route path="system" element={<div className="p-8 text-white">Configuración del Sistema (Próximamente)</div>} />
-                  <Route path="system/database" element={<DatabaseSetupPage />} />
-                  <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
-                </Routes>
-              </AdminLayout>
+              <AdminLayout />
             </ProtectedRoute>
           } 
-        />
+        >
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="dashboard" element={<AdminDashboardPage />} />
+          <Route path="clients" element={<AdminClientsPage />} />
+          <Route path="users" element={<div className="p-8 text-white">Gestión de Usuarios Globales (Próximamente)</div>} />
+          <Route path="plans" element={<div className="p-8 text-white">Planes y Licencias (Próximamente)</div>} />
+          <Route path="modules" element={<div className="p-8 text-white">Módulos y Funciones (Próximamente)</div>} />
+          <Route path="rbac" element={<div className="p-8 text-white">Roles y Permisos Globales (Próximamente)</div>} />
+          <Route path="audit" element={<div className="p-8 text-white">Auditoría Global (Próximamente)</div>} />
+          <Route path="system" element={<div className="p-8 text-white">Configuración del Sistema (Próximamente)</div>} />
+          <Route path="system/database" element={<DatabaseSetupPage />} />
+          <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+        </Route>
 
         {/* Protected App Modules */}
         <Route path="/app" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>

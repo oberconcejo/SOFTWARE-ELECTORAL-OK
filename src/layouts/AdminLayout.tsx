@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, useLocation, Outlet } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Users, 
@@ -134,7 +134,7 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {children}
+            {children || <Outlet />}
           </motion.div>
         </div>
       </main>
