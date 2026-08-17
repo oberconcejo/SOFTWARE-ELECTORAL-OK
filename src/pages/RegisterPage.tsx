@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
 import { Eye, EyeOff, Lock, Mail, ArrowLeft, Loader2, User } from 'lucide-react';
+import { AppLogo } from '@/src/components/common/AppLogo';
 import { supabase } from '@/src/lib/supabase';
 
 export default function RegisterPage() {
@@ -137,9 +138,15 @@ export default function RegisterPage() {
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-20 h-20 bg-indigo-600 rounded-3xl mx-auto mb-8 flex items-center justify-center shadow-2xl shadow-indigo-500/40"
+            className="mx-auto mb-8 flex items-center justify-center"
           >
-            <span className="text-white text-4xl font-bold">S</span>
+            <AppLogo 
+              size="2xl" 
+              variant="brand" 
+              animated={true} 
+              floating={true}
+              showGlowHalo={true}
+            />
           </motion.div>
           <h2 className="text-4xl font-bold text-white mb-4">Crea tu cuenta</h2>
           <p className="text-indigo-200/60 text-lg max-w-md mx-auto">

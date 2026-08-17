@@ -232,6 +232,24 @@ CREATE TABLE IF NOT EXISTS api_usage_transactions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS admin_access_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    full_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT,
+    requested_username TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    status TEXT DEFAULT 'PENDIENTE' CHECK (status IN ('PENDIENTE', 'APROBADA', 'RECHAZADA', 'CANCELADA')),
+    rejection_reason TEXT,
+    reviewed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    reviewed_at TIMESTAMPTZ,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS voters (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     client_id UUID REFERENCES clients(id) ON DELETE CASCADE,

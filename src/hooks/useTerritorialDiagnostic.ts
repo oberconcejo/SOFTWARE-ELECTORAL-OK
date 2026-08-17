@@ -36,269 +36,140 @@ export function useTerritorialDiagnostic() {
 
   // Load Initial Data
   const loadData = useCallback(async () => {
+    if (!supabase || !tenantId || tenantId === 'default_tenant') {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      let loadedSectors: ThematicSector[] = [];
-      let loadedVariables: SectorVariable[] = [];
-      let loadedFiches: MicroLocalFiche[] = [];
+      const [secRes, varRes, ficRes] = await Promise.all([
+        supabase.from('sectors').select('*').order('created_at'),
+        supabase.from('sector_variables').select('*').order('created_at'),
+        supabase.from('territorial_fiches').select('*').order('created_at', { ascending: false })
+      ]);
 
-      // 1. Check Supabase first if connected
-      if (supabase && tenantId) {
-        try {
-          const [secRes, varRes, ficRes] = await Promise.allSettled([
-            supabase.from('territorial_sectors').select('*').eq('client_id', tenantId).order('created_at'),
-            supabase.from('sector_variables').select('*').eq('client_id', tenantId).order('created_at'),
-            supabase.from('territorial_fiches').select('*').eq('client_id', tenantId).order('created_at', { ascending: false })
-          ]);
-
-          if (secRes.status === 'fulfilled' && secRes.value.data && !secRes.value.error) {
-            loadedSectors = secRes.value.data.map((s: any) => ({
-              id: s.id,
-              clientId: s.client_id,
-              name: s.name,
-              description: s.description,
-              iconName: s.icon_name || 'Layers',
-              color: s.color || '#6366f1',
-              createdAt: s.created_at,
-              updatedAt: s.updated_at
-            }));
-          }
-
-          if (varRes.status === 'fulfilled' && varRes.value.data && !varRes.value.error) {
-            loadedVariables = varRes.value.data.map((v: any) => ({
-              id: v.id,
-              sectorId: v.sector_id,
-              clientId: v.client_id,
-              name: v.name,
-              description: v.description,
-              indicatorName: v.indicator_name,
-              unit: v.unit,
-              baselineValue: v.baseline_value,
-              targetValue: v.target_value,
-              currentValue: v.current_value,
-              status: v.status || 'EN_DIAGNOSTICO',
-              source: v.source,
-              surveyId: v.survey_id,
-              surveyTitle: v.survey_title,
-              surveyFinding: v.survey_finding,
-              createdAt: v.created_at,
-              updatedAt: v.updated_at
-            }));
-          }
-
-          if (ficRes.status === 'fulfilled' && ficRes.value.data && !ficRes.value.error) {
-            loadedFiches = ficRes.value.data.map((f: any) => ({
-              id: f.id,
-              clientId: f.client_id,
-              comuna: f.comuna,
-              corregimiento: f.corregimiento,
-              barrio: f.barrio,
-              sectorId: f.sector_id,
-              sectorName: f.sector_name,
-              category: f.category,
-              impact: f.impact || 'ALTO',
-              problem: f.problem,
-              proposal: f.proposal,
-              isLinkedToGovProgram: f.is_linked_to_gov_program || false,
-              govProgramPillarId: f.gov_program_pillar_id,
-              registeredBy: f.registered_by,
-              createdAt: f.created_at,
-              updatedAt: f.updated_at
-            }));
-          }
-        } catch (dbErr) {
-          console.warn('Supabase query handled with fallback:', dbErr);
+      if (secRes.data) {
+        setSectors(secRes.data.map((s: any) => ({
+          id: s.id,
+          clientId: tenantId,
+          name: s.nombre,
+          description: s.descripcion,
+          iconName: s.icon_name || 'Layers',
+          color: s.color || '#6366f1',
+          createdAt: s.created_at,
+          updatedAt: s.updated_at
+        })));
+        
+        if (secRes.data.length > 0 && !selectedSectorId) {
+          setSelectedSectorId(secRes.data[0].id);
         }
       }
 
-      // If nothing from DB or table not created, load from client-isolated local storage
-      if (loadedSectors.length === 0) {
-        const storedSectors = localStorage.getItem(SECTORS_KEY);
-        if (storedSectors) {
-          try {
-            loadedSectors = JSON.parse(storedSectors);
-          } catch (e) {
-            console.error('Error parsing stored sectors', e);
-          }
-        }
+      if (varRes.data) {
+        setVariables(varRes.data.map((v: any) => ({
+          id: v.id,
+          sectorId: v.sector_id,
+          clientId: tenantId,
+          name: v.nombre,
+          description: v.descripcion,
+          indicatorName: v.indicador_nombre,
+          unit: v.unidad_medida,
+          baselineValue: v.linea_base,
+          targetValue: v.meta,
+          currentValue: v.valor_actual,
+          status: v.estado || 'EN_DIAGNOSTICO',
+          createdAt: v.created_at,
+          updatedAt: v.updated_at
+        })));
       }
 
-      if (loadedVariables.length === 0) {
-        const storedVars = localStorage.getItem(VARIABLES_KEY);
-        if (storedVars) {
-          try {
-            loadedVariables = JSON.parse(storedVars);
-          } catch (e) {
-            console.error('Error parsing stored variables', e);
-          }
-        }
-      }
-
-      if (loadedFiches.length === 0) {
-        const storedFiches = localStorage.getItem(FICHES_KEY);
-        if (storedFiches) {
-          try {
-            loadedFiches = JSON.parse(storedFiches);
-          } catch (e) {
-            console.error('Error parsing stored fiches', e);
-          }
-        }
-      }
-
-      // Check survey sync state from storage
-      const storedSync = localStorage.getItem(SYNC_KEY);
-      if (storedSync) {
-        try {
-          const parsed = JSON.parse(storedSync);
-          setSurveySyncState(parsed);
-        } catch (e) {}
-      }
-
-      setSectors(loadedSectors);
-      setVariables(loadedVariables);
-      setFiches(loadedFiches);
-
-      if (loadedSectors.length > 0 && !selectedSectorId) {
-        setSelectedSectorId(loadedSectors[0].id);
+      if (ficRes.data) {
+        setFiches(ficRes.data.map((f: any) => ({
+          id: f.id,
+          clientId: tenantId,
+          comuna: f.comuna,
+          corregimiento: f.corregimiento,
+          barrio: f.barrio,
+          sectorId: f.sector_id,
+          sectorName: f.sector_name,
+          category: f.categoria,
+          impact: f.impacto || 'ALTO',
+          problem: f.problematica,
+          proposal: f.propuesta_solucion,
+          isLinkedToGovProgram: f.viculado_programa || false,
+          registeredBy: f.registrado_por,
+          createdAt: f.created_at,
+          updatedAt: f.updated_at
+        })));
       }
     } catch (err: any) {
       console.error('Error loading territorial diagnostic data:', err);
-      setError(err.message || 'No fue posible conectar con el servidor. Intenta nuevamente.');
+      setError('No fue posible cargar los datos territoriales reales.');
     } finally {
       setLoading(false);
     }
-  }, [tenantId, SECTORS_KEY, VARIABLES_KEY, FICHES_KEY, SYNC_KEY, selectedSectorId]);
+  }, [tenantId, selectedSectorId]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  // Persist helpers
-  const saveSectors = (newSectors: ThematicSector[]) => {
-    setSectors(newSectors);
-    localStorage.setItem(SECTORS_KEY, JSON.stringify(newSectors));
-  };
-
-  const saveVariables = (newVars: SectorVariable[]) => {
-    setVariables(newVars);
-    localStorage.setItem(VARIABLES_KEY, JSON.stringify(newVars));
-  };
-
-  const saveFiches = (newFiches: MicroLocalFiche[]) => {
-    setFiches(newFiches);
-    localStorage.setItem(FICHES_KEY, JSON.stringify(newFiches));
-  };
 
   // --- SECTOR CRUD ---
   const createSector = async (data: { name: string; description?: string; iconName?: string; color?: string }) => {
     const trimmedName = data.name.trim();
     if (!trimmedName) throw new Error('El nombre del sector es obligatorio.');
 
-    // Check duplicates within client
-    if (sectors.some(s => s.name.toLowerCase() === trimmedName.toLowerCase())) {
-      throw new Error(`Ya existe un sector registrado con el nombre "${trimmedName}".`);
-    }
-
-    const newSector: ThematicSector = {
-      id: 'sec_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-      clientId: tenantId,
-      name: trimmedName,
-      description: data.description?.trim() || '',
-      iconName: data.iconName || 'Layers',
-      color: data.color || '#6366f1',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    if (supabase && tenantId) {
-      try {
-        await supabase.from('territorial_sectors').insert([{
-          id: newSector.id,
-          client_id: tenantId,
-          name: newSector.name,
-          description: newSector.description,
-          icon_name: newSector.iconName,
-          color: newSector.color,
-          created_at: newSector.createdAt
+    try {
+      if (supabase && tenantId) {
+        const { error } = await supabase.from('sectors').insert([{
+          nombre: trimmedName,
+          descripcion: data.description?.trim() || '',
+          icon_name: data.iconName || 'Layers',
+          color: data.color || '#6366f1'
         }]);
-      } catch (e) {
-        console.warn('Supabase insert fallback to local storage:', e);
-      }
-    }
 
-    const updated = [...sectors, newSector];
-    saveSectors(updated);
-    if (!selectedSectorId) {
-      setSelectedSectorId(newSector.id);
+        if (error) throw error;
+        await loadData();
+      }
+    } catch (err: any) {
+      console.error('Error creating sector:', err);
+      throw new Error(err.message || 'Error al guardar el sector.');
     }
-    return newSector;
   };
 
   const updateSector = async (id: string, data: { name: string; description?: string; iconName?: string; color?: string }) => {
-    const trimmedName = data.name.trim();
-    if (!trimmedName) throw new Error('El nombre del sector es obligatorio.');
-
-    if (sectors.some(s => s.id !== id && s.name.toLowerCase() === trimmedName.toLowerCase())) {
-      throw new Error(`Ya existe otro sector con el nombre "${trimmedName}".`);
-    }
-
-    const updated = sectors.map(s => {
-      if (s.id === id) {
-        return {
-          ...s,
-          name: trimmedName,
-          description: data.description?.trim() || '',
-          iconName: data.iconName || s.iconName,
-          color: data.color || s.color,
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return s;
-    });
-
-    if (supabase && tenantId) {
-      try {
-        await supabase.from('territorial_sectors').update({
-          name: trimmedName,
-          description: data.description?.trim() || '',
+    try {
+      if (supabase && tenantId) {
+        const { error } = await supabase.from('sectors').update({
+          nombre: data.name.trim(),
+          descripcion: data.description?.trim(),
           icon_name: data.iconName,
           color: data.color,
           updated_at: new Date().toISOString()
         }).eq('id', id);
-      } catch (e) {
-        console.warn('Supabase update fallback:', e);
-      }
-    }
 
-    saveSectors(updated);
+        if (error) throw error;
+        await loadData();
+      }
+    } catch (err: any) {
+      console.error('Error updating sector:', err);
+      throw new Error('Error al actualizar el sector.');
+    }
   };
 
   const deleteSector = async (id: string) => {
-    // Check dependencies
-    const hasVariables = variables.some(v => v.sectorId === id);
-    const hasFiches = fiches.some(f => f.sectorId === id);
-
-    if (hasVariables || hasFiches) {
-      throw new Error(
-        `No se puede eliminar el sector porque tiene ${hasVariables ? 'variables asociadas' : ''} ${hasVariables && hasFiches ? 'y ' : ''}${hasFiches ? 'fichas territoriales vinculadas' : ''}. Elimine o reasigne esos elementos primero.`
-      );
-    }
-
-    if (supabase && tenantId) {
-      try {
-        await supabase.from('territorial_sectors').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Supabase delete fallback:', e);
+    try {
+      if (supabase && tenantId) {
+        const { error } = await supabase.from('sectors').delete().eq('id', id);
+        if (error) throw error;
+        await loadData();
       }
-    }
-
-    const updated = sectors.filter(s => s.id !== id);
-    saveSectors(updated);
-
-    if (selectedSectorId === id) {
-      setSelectedSectorId(updated.length > 0 ? updated[0].id : null);
+    } catch (err: any) {
+      console.error('Error deleting sector:', err);
+      throw new Error('Error al eliminar el sector.');
     }
   };
 
@@ -322,93 +193,64 @@ export function useTerritorialDiagnostic() {
     if (!trimmedName) throw new Error('El nombre de la variable es obligatorio.');
     if (!data.sectorId) throw new Error('El sector asociado es obligatorio.');
 
-    const newVar: SectorVariable = {
-      id: 'var_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-      sectorId: data.sectorId,
-      clientId: tenantId,
-      name: trimmedName,
-      description: data.description?.trim() || '',
-      indicatorName: data.indicatorName?.trim() || '',
-      unit: data.unit?.trim() || '%',
-      baselineValue: data.baselineValue !== undefined && data.baselineValue !== '' ? data.baselineValue : null,
-      targetValue: data.targetValue !== undefined && data.targetValue !== '' ? data.targetValue : null,
-      currentValue: data.currentValue !== undefined && data.currentValue !== '' ? data.currentValue : null,
-      status: data.status || 'EN_DIAGNOSTICO',
-      source: data.source?.trim() || '',
-      surveyId: data.surveyId,
-      surveyTitle: data.surveyTitle,
-      surveyFinding: data.surveyFinding?.trim() || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    if (supabase && tenantId) {
-      try {
-        await supabase.from('sector_variables').insert([{
-          id: newVar.id,
-          sector_id: newVar.sectorId,
-          client_id: tenantId,
-          name: newVar.name,
-          description: newVar.description,
-          indicator_name: newVar.indicatorName,
-          unit: newVar.unit,
-          baseline_value: newVar.baselineValue,
-          target_value: newVar.targetValue,
-          current_value: newVar.currentValue,
-          status: newVar.status,
-          source: newVar.source,
-          survey_id: newVar.surveyId,
-          survey_title: newVar.surveyTitle,
-          survey_finding: newVar.surveyFinding,
-          created_at: newVar.createdAt
+    try {
+      if (supabase && tenantId) {
+        const { error } = await supabase.from('sector_variables').insert([{
+          sector_id: data.sectorId,
+          nombre: trimmedName,
+          descripcion: data.description?.trim() || '',
+          indicador_nombre: data.indicatorName?.trim() || '',
+          unidad_medida: data.unit?.trim() || '%',
+          linea_base: data.baselineValue?.toString(),
+          meta: data.targetValue?.toString(),
+          valor_actual: data.currentValue?.toString(),
+          estado: data.status || 'EN_DIAGNOSTICO'
         }]);
-      } catch (e) {
-        console.warn('Supabase insert variable fallback:', e);
-      }
-    }
 
-    const updated = [...variables, newVar];
-    saveVariables(updated);
-    return newVar;
+        if (error) throw error;
+        await loadData();
+      }
+    } catch (err: any) {
+      console.error('Error creating variable:', err);
+      throw new Error('Error al guardar la variable.');
+    }
   };
 
   const updateVariable = async (id: string, data: Partial<SectorVariable>) => {
-    const updated = variables.map(v => {
-      if (v.id === id) {
-        return {
-          ...v,
-          ...data,
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return v;
-    });
-
-    if (supabase && tenantId) {
-      try {
-        await supabase.from('sector_variables').update({
-          ...data,
+    try {
+      if (supabase && tenantId) {
+        const { error } = await supabase.from('sector_variables').update({
+          nombre: data.name,
+          descripcion: data.description,
+          indicador_nombre: data.indicatorName,
+          unidad_medida: data.unit,
+          linea_base: data.baselineValue?.toString(),
+          meta: data.targetValue?.toString(),
+          valor_actual: data.currentValue?.toString(),
+          estado: data.status,
           updated_at: new Date().toISOString()
         }).eq('id', id);
-      } catch (e) {
-        console.warn('Supabase update variable fallback:', e);
-      }
-    }
 
-    saveVariables(updated);
+        if (error) throw error;
+        await loadData();
+      }
+    } catch (err: any) {
+      console.error('Error updating variable:', err);
+      throw new Error('Error al actualizar la variable.');
+    }
   };
 
   const deleteVariable = async (id: string) => {
-    if (supabase && tenantId) {
-      try {
-        await supabase.from('sector_variables').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Supabase delete variable fallback:', e);
+    try {
+      if (supabase && tenantId) {
+        const { error } = await supabase.from('sector_variables').delete().eq('id', id);
+        if (error) throw error;
+        await loadData();
       }
+    } catch (err: any) {
+      console.error('Error deleting variable:', err);
+      throw new Error('Error al eliminar la variable.');
     }
-
-    const updated = variables.filter(v => v.id !== id);
-    saveVariables(updated);
   };
 
   // --- FICHES CRUD ---
@@ -427,91 +269,69 @@ export function useTerritorialDiagnostic() {
     if (!data.problem.trim()) throw new Error('El problema diagnosticado es obligatorio.');
     if (!data.proposal.trim()) throw new Error('La propuesta programática es obligatoria.');
 
-    const targetSector = sectors.find(s => s.id === data.sectorId);
-
-    const newFiche: MicroLocalFiche = {
-      id: 'fic_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-      clientId: tenantId,
-      comuna: data.comuna.trim(),
-      corregimiento: data.corregimiento?.trim() || '',
-      barrio: data.barrio?.trim() || '',
-      sectorId: data.sectorId,
-      sectorName: targetSector?.name || data.category || 'General',
-      category: data.category || targetSector?.name || 'General',
-      impact: data.impact || 'ALTO',
-      problem: data.problem.trim(),
-      proposal: data.proposal.trim(),
-      isLinkedToGovProgram: data.isLinkedToGovProgram || false,
-      registeredBy: user?.displayName || user?.email || 'Usuario',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    if (supabase && tenantId) {
-      try {
-        await supabase.from('territorial_fiches').insert([{
-          id: newFiche.id,
-          client_id: tenantId,
-          comuna: newFiche.comuna,
-          corregimiento: newFiche.corregimiento,
-          barrio: newFiche.barrio,
-          sector_id: newFiche.sectorId,
-          sector_name: newFiche.sectorName,
-          category: newFiche.category,
-          impact: newFiche.impact,
-          problem: newFiche.problem,
-          proposal: newFiche.proposal,
-          is_linked_to_gov_program: newFiche.isLinkedToGovProgram,
-          registered_by: newFiche.registeredBy,
-          created_at: newFiche.createdAt
+    try {
+      if (supabase && tenantId) {
+        const targetSector = sectors.find(s => s.id === data.sectorId);
+        const { error } = await supabase.from('territorial_fiches').insert([{
+          comuna: data.comuna.trim(),
+          corregimiento: data.corregimiento?.trim() || '',
+          barrio: data.barrio?.trim() || '',
+          sector_id: data.sectorId,
+          sector_name: targetSector?.name || data.category || 'General',
+          categoria: data.category || targetSector?.name || 'General',
+          impacto: data.impact || 'ALTO',
+          problematica: data.problem.trim(),
+          propuesta_solucion: data.proposal.trim(),
+          viculado_programa: data.isLinkedToGovProgram || false,
+          registrado_por: user?.displayName || user?.email || 'Usuario'
         }]);
-      } catch (e) {
-        console.warn('Supabase insert fiche fallback:', e);
-      }
-    }
 
-    const updated = [newFiche, ...fiches];
-    saveFiches(updated);
-    return newFiche;
+        if (error) throw error;
+        await loadData();
+      }
+    } catch (err: any) {
+      console.error('Error creating fiche:', err);
+      throw new Error('Error al guardar la ficha territorial.');
+    }
   };
 
   const updateFiche = async (id: string, data: Partial<MicroLocalFiche>) => {
-    const updated = fiches.map(f => {
-      if (f.id === id) {
-        return {
-          ...f,
-          ...data,
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return f;
-    });
-
-    if (supabase && tenantId) {
-      try {
-        await supabase.from('territorial_fiches').update({
-          ...data,
+    try {
+      if (supabase && tenantId) {
+        const { error } = await supabase.from('territorial_fiches').update({
+          comuna: data.comuna,
+          corregimiento: data.corregimiento,
+          barrio: data.barrio,
+          sector_id: data.sectorId,
+          sector_name: data.sectorName,
+          categoria: data.category,
+          impacto: data.impact,
+          problematica: data.problem,
+          propuesta_solucion: data.proposal,
+          viculado_programa: data.isLinkedToGovProgram,
           updated_at: new Date().toISOString()
         }).eq('id', id);
-      } catch (e) {
-        console.warn('Supabase update fiche fallback:', e);
-      }
-    }
 
-    saveFiches(updated);
+        if (error) throw error;
+        await loadData();
+      }
+    } catch (err: any) {
+      console.error('Error updating fiche:', err);
+      throw new Error('Error al actualizar la ficha territorial.');
+    }
   };
 
   const deleteFiche = async (id: string) => {
-    if (supabase && tenantId) {
-      try {
-        await supabase.from('territorial_fiches').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Supabase delete fiche fallback:', e);
+    try {
+      if (supabase && tenantId) {
+        const { error } = await supabase.from('territorial_fiches').delete().eq('id', id);
+        if (error) throw error;
+        await loadData();
       }
+    } catch (err: any) {
+      console.error('Error deleting fiche:', err);
+      throw new Error('Error al eliminar la ficha territorial.');
     }
-
-    const updated = fiches.filter(f => f.id !== id);
-    saveFiches(updated);
   };
 
   const toggleLinkGovProgram = async (ficheId: string) => {

@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error: null,
     isDatabaseConfigured: true,
     isSystemReady: false,
+    sessionToken: null,
   });
 
   useEffect(() => {
@@ -73,14 +74,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
+        setState(prev => ({ ...prev, sessionToken: session.access_token }));
         fetchUserData(session.user.id);
       } else {
-        setState(prev => ({ ...prev, loading: false }));
+        setState(prev => ({ ...prev, sessionToken: null, loading: false }));
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
+        setState(prev => ({ ...prev, sessionToken: session.access_token }));
         fetchUserData(session.user.id);
       } else {
         setState(prev => ({
@@ -89,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           client: null,
           license: null,
           permissions: [],
+          sessionToken: null,
           loading: false,
           error: null,
         }));
@@ -98,59 +102,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserData = async (userId: string): Promise<FetchedUserData | null> => {
+  const fetchUserData = async (userId: string, attempt: number = 0): Promise<FetchedUserData | null> => {
     if (!supabase) return null;
     try {
       setState(prev => ({ ...prev, loading: true }));
 
-      // 1. Fetch Profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+      // Helper function to fetch profile with server fallback if clock skew or PGRST303 occurs
+      const getProfileData = async () => {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
 
-      if (profileError && (profileError.code === '42P01' || profileError.code === 'PGRST205' || profileError.message?.includes('does not exist'))) {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser) {
-          const fallbackUser: User = {
-            id: authUser.id,
-            email: authUser.email!,
-            displayName: authUser.user_metadata?.display_name || authUser.email?.split('@')[0],
-            role: (authUser.email === 'oberosorio1@gmail.com' || authUser.email?.includes('admin')) ? UserRole.SUPERADMIN : UserRole.ADMIN_CLIENTE,
-            status: 'ACTIVE',
-            allowedModules: ['ADMINISTRATIVE', 'TERRITORY', 'STRATEGY', 'CRM']
-          };
-          setState(prev => ({
-            ...prev,
-            user: fallbackUser,
-            loading: false,
-            isDatabaseConfigured: false,
-            error: null
-          }));
-          return {
-            user: fallbackUser,
-            client: null,
-            apiUsage: null,
-            license: null,
-            permissions: [],
-            allowedModules: fallbackUser.allowedModules
-          };
+        if (profileError) {
+          // Check for clock skew / future JWT error
+          if (profileError.code === 'PGRST303' || profileError.message?.includes('future') || profileError.message?.includes('JWT')) {
+            throw profileError;
+          }
+          if (profileError.code === '42P01' || profileError.message?.includes('does not exist')) {
+            setState(prev => ({ ...prev, isDatabaseConfigured: false, loading: false }));
+            return null;
+          }
+          throw profileError;
+        }
+        return profile;
+      };
+
+      let activeProfile: any = null;
+
+      try {
+        activeProfile = await getProfileData();
+      } catch (err: any) {
+        // If JWT issued at future (PGRST303) or clock skew, retry after a short delay
+        if ((err?.code === 'PGRST303' || err?.message?.includes('future') || err?.message?.includes('JWT')) && attempt < 3) {
+          console.warn(`Clock skew detected (${err?.message || err?.code}). Retrying fetchUserData in ${(attempt + 1) * 800}ms... (attempt ${attempt + 1})`);
+          await new Promise(res => setTimeout(res, (attempt + 1) * 800));
+          return fetchUserData(userId, attempt + 1);
+        }
+
+        // Try server-side fallback using service role
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const fallbackRes = await fetch('/api/auth/profile', {
+            headers: {
+              'Authorization': `Bearer ${session?.access_token || ''}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (fallbackRes.ok) {
+            const fallbackData = await fallbackRes.json();
+            if (fallbackData?.profile) {
+              activeProfile = fallbackData.profile;
+            }
+          }
+        } catch (serverErr) {
+          console.warn('Server fallback failed:', serverErr);
+        }
+
+        if (!activeProfile) {
+          throw err;
         }
       }
 
-      let activeProfile = profile;
-
-      // Ensure oberosorio1@gmail.com or superadmin emails always have full root SUPERADMIN role and all modules
+      // Ensure root superadmin emails always have full root SUPERADMIN role
       if (activeProfile) {
-        const isSuperUser = activeProfile.email === 'oberosorio1@gmail.com' || 
-                            activeProfile.role === 'SUPERADMIN' || 
-                            activeProfile.email?.includes('superadmin');
-        if (isSuperUser) {
+        const isRootAdmin = activeProfile.email === 'oberosorio1@gmail.com';
+        if (isRootAdmin && activeProfile.role !== 'SUPERADMIN') {
           activeProfile.role = 'SUPERADMIN';
           activeProfile.allowed_modules = Object.values(CANONICAL_MODULES);
           
-          // Persist to database silently
+          // Sync with database asynchronously
           supabase
             .from('profiles')
             .update({
@@ -163,42 +185,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Auto-heal missing profile for authenticated user
       if (!activeProfile) {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser) {
-          const isSuperUser = authUser.email === 'oberosorio1@gmail.com' || authUser.email?.includes('superadmin');
-          const defaultRole = isSuperUser ? 'SUPERADMIN' : 'ADMIN_CLIENTE';
-          const defaultModules = Object.values(CANONICAL_MODULES);
-
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: userId,
-              email: authUser.email!,
-              display_name: authUser.user_metadata?.display_name || authUser.email?.split('@')[0],
-              role: defaultRole,
-              status: 'ACTIVE',
-              allowed_modules: defaultModules,
-              created_at: new Date().toISOString()
-            })
-            .select()
-            .single();
-
-          if (!createError && newProfile) {
-            activeProfile = newProfile;
-          } else {
-            // Temporary in-memory profile if database insert blocked by RLS
-            activeProfile = {
-              id: userId,
-              email: authUser.email!,
-              display_name: authUser.user_metadata?.display_name || authUser.email?.split('@')[0],
-              role: defaultRole,
-              status: 'ACTIVE',
-              allowed_modules: defaultModules
-            };
-          }
-        }
+        // If profile is missing but user is authenticated, we should not mock it.
+        // Instead, we sign out and show an error or prompt for profile creation.
+        await supabase.auth.signOut();
+        throw new Error('Tu cuenta no tiene un perfil configurado en la plataforma.');
       }
 
       if (!activeProfile) {
@@ -208,14 +199,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 2. Fetch Client if associated
       let client: Client | null = null;
       if (activeProfile.client_id) {
-        const { data: clientData, error: clientError } = await supabase
-          .from('clients')
-          .select('*')
-          .eq('id', activeProfile.client_id)
-          .maybeSingle();
+        try {
+          const { data: clientData, error: clientError } = await supabase
+            .from('clients')
+            .select('*')
+            .eq('id', activeProfile.client_id)
+            .maybeSingle();
 
-        if (!clientError && clientData) {
-          client = clientData;
+          if (!clientError && clientData) {
+            client = clientData;
+          }
+        } catch (e) {
+          console.warn('Error fetching client:', e);
         }
       }
 
@@ -240,31 +235,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 4. Fetch License if applicable
       let license: License | null = null;
       if (activeProfile.client_id) {
-        const { data: licenseData, error: licenseError } = await supabase
-          .from('licenses')
-          .select('*')
-          .eq('client_id', activeProfile.client_id)
-          .eq('status', 'ACTIVA')
-          .maybeSingle();
+        try {
+          const { data: licenseData, error: licenseError } = await supabase
+            .from('licenses')
+            .select('*')
+            .eq('client_id', activeProfile.client_id)
+            .eq('status', 'ACTIVA')
+            .maybeSingle();
 
-        if (!licenseError && licenseData) {
-          license = licenseData;
+          if (!licenseError && licenseData) {
+            license = licenseData;
+          }
+        } catch (e) {
+          console.warn('Error fetching license:', e);
         }
       }
 
-      // 4. Fetch Permissions
-      const { data: permissions } = await supabase
-        .from('user_permissions')
-        .select('*')
-        .eq('user_id', userId);
+      // 5. Fetch Permissions
+      let mappedPermissions: UserPermission[] = [];
+      try {
+        const { data: permissions } = await supabase
+          .from('user_permissions')
+          .select('*')
+          .eq('user_id', userId);
 
-      const mappedPermissions: UserPermission[] = (permissions || []).map(p => ({
-        id: p.id,
-        userId: p.user_id,
-        moduleCode: normalizeModuleCode(p.module_code),
-        functionCode: p.function_code,
-        actions: p.actions as Permission[]
-      }));
+        mappedPermissions = (permissions || []).map(p => ({
+          id: p.id,
+          userId: p.user_id,
+          moduleCode: normalizeModuleCode(p.module_code),
+          functionCode: p.function_code,
+          actions: p.actions as Permission[]
+        }));
+      } catch (e) {
+        console.warn('Error fetching permissions:', e);
+      }
 
       // Normalize raw profile modules
       let rawModules: string[] = activeProfile.allowed_modules || [];
@@ -320,7 +324,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (
-    email: string, 
+    emailOrIdentifier: string, 
     password: string, 
     options?: { requiredRole?: UserRole; requiredModule?: string }
   ): Promise<ModuleAuthorizationResult> => {
@@ -329,8 +333,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setState(prev => ({ ...prev, loading: true, error: null }));
 
+    let resolvedEmail = emailOrIdentifier.trim();
+
+    // Si el usuario ingresó número de cédula o nombre de usuario (sin @), buscar el correo asociado
+    if (!resolvedEmail.includes('@')) {
+      try {
+        const { data: profileMatch } = await supabase
+          .from('profiles')
+          .select('email')
+          .or(`phone.eq.${resolvedEmail},display_name.eq.${resolvedEmail}`)
+          .maybeSingle();
+
+        if (profileMatch?.email) {
+          resolvedEmail = profileMatch.email;
+        }
+      } catch (lookupErr) {
+        console.warn('Cedula/Username lookup fallback:', lookupErr);
+      }
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: resolvedEmail,
       password,
     });
 

@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { Button } from '@/src/components/ui/Button';
 import { useNavigate } from 'react-router-dom';
+import { AppLogo } from '@/src/components/common/AppLogo';
 
 export function LandingHeader() {
   const navigate = useNavigate();
@@ -17,15 +18,16 @@ export function LandingHeader() {
     <motion.header
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 backdrop-blur-lg border-b border-white/5"
+      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 backdrop-blur-lg border-b border-white/5 bg-[#080808]/80"
     >
       <div className="flex items-center gap-2">
-        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-          <span className="text-white font-bold text-xl">S</span>
-        </div>
-        <span className="text-white font-bold text-lg tracking-tight hidden sm:block">
-          SOFTWARE <span className="text-indigo-400">ELECTORAL</span>
-        </span>
+        <AppLogo 
+          size="md" 
+          variant="brand" 
+          withText={true} 
+          title="SOFTWARE" 
+          onClick={() => navigate('/')} 
+        />
       </div>
 
       <nav className="hidden md:flex items-center gap-8">
@@ -51,3 +53,4 @@ export function LandingHeader() {
     </motion.header>
   );
 }
+

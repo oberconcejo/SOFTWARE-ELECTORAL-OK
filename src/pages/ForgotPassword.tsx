@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Mail, ArrowLeft, Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/src/components/ui/Button';
+import { AppLogo } from '@/src/components/common/AppLogo';
 import { supabase } from '@/src/lib/supabase';
 
 export default function ForgotPasswordPage() {
@@ -44,11 +45,14 @@ export default function ForgotPasswordPage() {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
-        <div className="mb-8 flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
-            <span className="text-white text-xl font-bold">S</span>
-          </div>
-          <span className="text-xl font-bold text-white tracking-tight">SOFT<span className="text-indigo-400">ELECT</span></span>
+        <div className="mb-8 flex items-center justify-between">
+          <AppLogo 
+            size="md" 
+            variant="brand" 
+            withText={true} 
+            title="SOFTWARE" 
+            onClick={() => navigate('/')} 
+          />
         </div>
 
         <div className="bg-[#111114] border border-white/10 rounded-[32px] p-8 md:p-10 shadow-2xl">

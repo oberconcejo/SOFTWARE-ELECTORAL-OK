@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { AppLogo } from '@/src/components/common/AppLogo';
 import { 
   testSupabaseConnection, 
   registerNewClient 
@@ -9,7 +10,6 @@ import {
   Sparkles,
   ArrowRight,
   ShieldCheck,
-  Zap,
   Users,
   MapPin,
   Vote,
@@ -101,10 +101,14 @@ export default function LandingPage() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-2xl bg-[#080808]/90 border-b border-white/5 h-20 flex items-center justify-between px-6 lg:px-12">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-xl font-bold tracking-tight">SOFTWARE <span className="text-indigo-400">ELECTORAL</span></span>
+          <AppLogo 
+            size="md" 
+            variant="brand" 
+            withText={true} 
+            title="SOFTWARE" 
+            subtitle="Plataforma Electoral Inteligente"
+            onClick={() => navigate('/')} 
+          />
         </div>
 
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
@@ -137,7 +141,7 @@ export default function LandingPage() {
             className="fixed inset-0 z-[60] bg-[#080808] flex flex-col p-8"
           >
             <div className="flex justify-between items-center mb-12">
-              <span className="text-xl font-bold">SOFTWARE ELECTORAL</span>
+              <AppLogo size="sm" variant="brand" withText={true} title="SOFTWARE" />
               <button onClick={() => setMobileMenuOpen(false)}><X className="w-8 h-8" /></button>
             </div>
             <nav className="flex flex-col gap-8 text-2xl font-bold">
@@ -163,22 +167,13 @@ export default function LandingPage() {
 
       <main className="relative z-10">
         {/* Hero */}
-        <section className="pt-40 pb-24 px-6 max-w-7xl mx-auto text-center">
+        <section className="pt-36 pb-24 px-6 max-w-7xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="space-y-8"
+            className="space-y-8 flex flex-col items-center"
           >
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-600/10 border border-indigo-600/20 text-indigo-400 text-sm font-bold"
-            >
-              <Zap className="w-4 h-4" />
-              <span>Plataforma Electoral con IA Generativa</span>
-            </motion.div>
             <motion.h1 
               initial={{ opacity: 0, y: 25 }}
               animate={{ opacity: 1, y: 0 }}
@@ -202,11 +197,11 @@ export default function LandingPage() {
               transition={{ duration: 0.6, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 px-6 md:px-0"
             >
-              <button onClick={() => navigate('/select-module')} className="w-full sm:w-auto px-8 py-4 rounded-full bg-indigo-600 hover:bg-indigo-500 font-bold text-lg flex items-center justify-center gap-3 transition-all shadow-xl shadow-indigo-600/20">
-                Iniciar Sesión <ArrowRight className="w-5 h-5" />
+              <button onClick={() => navigate('/solicitar-acceso')} className="w-full sm:w-auto px-8 py-4 rounded-full bg-indigo-600 hover:bg-indigo-500 font-bold text-lg flex items-center justify-center gap-3 transition-all shadow-xl shadow-indigo-600/20">
+                Solicitar Acceso <ArrowRight className="w-5 h-5" />
               </button>
-              <button className="w-full sm:w-auto px-8 py-4 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 font-bold text-lg flex items-center justify-center gap-3 transition-all">
-                <Play className="w-5 h-5 fill-current" /> Ver Demo
+              <button onClick={() => navigate('/select-module')} className="w-full sm:w-auto px-8 py-4 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 font-bold text-lg flex items-center justify-center gap-3 transition-all">
+                Iniciar Sesión
               </button>
             </motion.div>
           </motion.div>
@@ -432,12 +427,13 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-10 items-start">
             {/* Bloque 1: Software Electoral */}
             <div className="md:col-span-6 space-y-3">
-              <div className="h-8 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-600/30 shrink-0">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-sm font-bold tracking-wider text-white uppercase">SOFTWARE ELECTORAL</span>
-              </div>
+              <AppLogo 
+                size="sm" 
+                variant="brand" 
+                withText={true} 
+                title="SOFTWARE" 
+                subtitle="Suite de Inteligencia & Gestión Electoral" 
+              />
               <p className="text-slate-400 text-sm leading-relaxed max-w-sm pt-1">
                 La suite definitiva para la gestión moderna de campañas electorales de alto nivel.
               </p>

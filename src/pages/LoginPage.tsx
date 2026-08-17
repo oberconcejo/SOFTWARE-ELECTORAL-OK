@@ -5,6 +5,7 @@ import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
 import { Eye, EyeOff, Lock, Mail, ArrowLeft, Loader2, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { AppLogo } from '@/src/components/common/AppLogo';
 import { 
   normalizeModuleCode, 
   getModuleDisplayName, 
@@ -71,9 +72,15 @@ export default function LoginPage() {
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-20 h-20 bg-indigo-600 rounded-3xl mx-auto mb-8 flex items-center justify-center shadow-2xl shadow-indigo-500/40"
+            className="mx-auto mb-8 flex items-center justify-center"
           >
-            <span className="text-white text-4xl font-bold">S</span>
+            <AppLogo 
+              size="2xl" 
+              variant={targetModule === 'STRATEGY' ? 'purple' : targetModule === 'TERRITORY' ? 'emerald' : 'indigo'} 
+              animated={true} 
+              floating={true}
+              showGlowHalo={true}
+            />
           </motion.div>
           
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold uppercase tracking-wider mb-4">
@@ -108,10 +115,12 @@ export default function LoginPage() {
         >
           {/* Mobile Branding */}
           <div className="md:hidden flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
-              <span className="text-white text-xl font-bold">S</span>
-            </div>
-            <span className="text-xl font-bold text-white tracking-tight">SOFTWARE <span className="text-indigo-400">ELECTORAL</span></span>
+            <AppLogo 
+              size="sm" 
+              variant={targetModule === 'STRATEGY' ? 'purple' : targetModule === 'TERRITORY' ? 'emerald' : 'indigo'} 
+              withText={true} 
+              title="SOFTWARE" 
+            />
           </div>
 
           <Button
@@ -222,10 +231,10 @@ export default function LoginPage() {
             <p className="text-slate-400 text-sm">
               ¿No tienes una cuenta?{' '}
               <button 
-                onClick={() => navigate('/register')}
+                onClick={() => navigate('/solicitar-acceso')}
                 className="text-indigo-400 font-semibold hover:text-indigo-300 transition-colors"
               >
-                Regístrate aquí
+                Solicita tu acceso aquí
               </button>
             </p>
           </div>

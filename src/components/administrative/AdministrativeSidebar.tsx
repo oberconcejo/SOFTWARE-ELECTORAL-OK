@@ -14,6 +14,7 @@ import { useAuth } from '@/src/contexts/AuthContext';
 import { usePermissions } from '@/src/hooks/usePermissions';
 import { administrativeNavSections } from '@/src/config/administrativeNavigation';
 import { UserRole } from '@/src/types';
+import { AppLogo } from '@/src/components/common/AppLogo';
 
 interface AdministrativeSidebarProps {
   isCollapsed: boolean;
@@ -93,25 +94,35 @@ export function AdministrativeSidebar({
         <div className="p-3.5 border-b border-cyan-900/30 flex items-center justify-between min-h-[64px]">
           {(!isCollapsed || isMobileOpen) ? (
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-teal-950/90 border border-teal-500/40 flex items-center justify-center text-teal-400 shadow-md shadow-teal-950/60 flex-shrink-0">
-                <Vote className="w-5 h-5" />
-              </div>
+              <AppLogo 
+                size="sm" 
+                variant="indigo" 
+                animated={true} 
+                floating={true}
+                showGlowHalo={true} 
+              />
               <div className="flex flex-col min-w-0">
                 <span className="font-bold text-sm text-white leading-tight tracking-tight flex items-center gap-1.5 truncate">
-                  Campaña Ganadora IA
+                  SOFTWARE ELECTORAL
                 </span>
                 <span className="text-[11px] text-cyan-400 font-semibold tracking-wide flex items-center gap-1 truncate">
-                  Panel de Control
+                  Gestión Administrativa
                 </span>
               </div>
             </div>
           ) : (
             <div 
               onClick={onToggleCollapse}
-              className="w-10 h-10 rounded-xl bg-teal-950/90 border border-teal-500/40 flex items-center justify-center text-teal-400 mx-auto shadow-md shadow-teal-950/60 cursor-pointer"
+              className="mx-auto cursor-pointer"
               title="Expandir menú"
             >
-              <Vote className="w-5 h-5" />
+              <AppLogo 
+                size="sm" 
+                variant="indigo" 
+                animated={true} 
+                floating={true}
+                showGlowHalo={true} 
+              />
             </div>
           )}
 

@@ -26,6 +26,7 @@ import {
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { cn } from '@/src/lib/utils';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { AppLogo } from '@/src/components/common/AppLogo';
 
 interface DashboardSidebarProps {
   isOpen?: boolean;
@@ -95,16 +96,13 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
         <div className="p-4 border-b border-white/5 flex items-center justify-between min-h-[68px]">
           {(!isCollapsed || isOpen) ? (
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className={cn(
-                "w-9 h-9 rounded-xl flex items-center justify-center shadow-md flex-shrink-0",
-                isStrategyModule 
-                  ? "bg-purple-950/80 border border-purple-500/40 text-purple-400" 
-                  : isTerritoryModule 
-                    ? "bg-emerald-950/80 border border-emerald-500/40 text-emerald-400" 
-                    : "bg-indigo-950/80 border border-indigo-500/40 text-indigo-400"
-              )}>
-                {isStrategyModule ? <Target className="w-5 h-5" /> : isTerritoryModule ? <MapIcon className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
-              </div>
+              <AppLogo 
+                size="sm" 
+                variant={isStrategyModule ? 'purple' : isTerritoryModule ? 'emerald' : 'indigo'} 
+                animated={true} 
+                floating={true}
+                showGlowHalo={true} 
+              />
               <div className="flex flex-col min-w-0">
                 <span className="font-bold text-xs text-white leading-tight tracking-tight truncate">
                   {isStrategyModule ? 'GESTIÓN ESTRATÉGICA' : isTerritoryModule ? 'GESTIÓN TERRITORIAL' : 'SOFTWARE ELECTORAL'}
@@ -118,15 +116,14 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
               </div>
             </div>
           ) : (
-            <div className={cn(
-              "w-9 h-9 rounded-xl flex items-center justify-center shadow-md mx-auto",
-              isStrategyModule 
-                ? "bg-purple-950/80 border border-purple-500/40 text-purple-400" 
-                : isTerritoryModule 
-                  ? "bg-emerald-950/80 border border-emerald-500/40 text-emerald-400" 
-                  : "bg-indigo-950/80 border border-indigo-500/40 text-indigo-400"
-            )}>
-              {isStrategyModule ? <Target className="w-5 h-5" /> : isTerritoryModule ? <MapIcon className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
+            <div className="mx-auto flex items-center justify-center">
+              <AppLogo 
+                size="sm" 
+                variant={isStrategyModule ? 'purple' : isTerritoryModule ? 'emerald' : 'indigo'} 
+                animated={true} 
+                floating={true}
+                showGlowHalo={true} 
+              />
             </div>
           )}
 

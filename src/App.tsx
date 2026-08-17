@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import LandingPage from '@/src/pages/LandingPage';
 import LoginPage from '@/src/pages/LoginPage';
-import RegisterPage from '@/src/pages/RegisterPage';
+import RequestAccessPage from '@/src/pages/RequestAccessPage';
 import ForgotPasswordPage from '@/src/pages/ForgotPassword';
 import ModuleSelectionPage from '@/src/pages/ModuleSelectionPage';
 import AdminLoginPage from '@/src/pages/AdminLoginPage';
@@ -17,6 +17,14 @@ import DatabaseSetupPage from '@/src/pages/DatabaseSetupPage';
 import { AdminLayout } from '@/src/layouts/AdminLayout';
 import AdminDashboardPage from '@/src/pages/admin/AdminDashboardPage';
 import AdminClientsPage from '@/src/pages/admin/AdminClientsPage';
+import AdminUsersPage from '@/src/pages/admin/AdminUsersPage';
+import AdminApiManagementPage from '@/src/pages/admin/AdminApiManagementPage';
+import AdminAccessRequestsPage from '@/src/pages/admin/AdminAccessRequestsPage';
+import AdminPlansLicensesPage from '@/src/pages/admin/AdminPlansLicensesPage';
+import AdminModulesPage from '@/src/pages/admin/AdminModulesPage';
+import AdminRbacPage from '@/src/pages/admin/AdminRbacPage';
+import AdminAuditPage from '@/src/pages/admin/AdminAuditPage';
+import AdminSystemDatabasePage from '@/src/pages/admin/AdminSystemDatabasePage';
 import AdministrativeLayout from '@/src/layouts/AdministrativeLayout';
 import AdminDashboardView from '@/src/pages/administrative/AdminDashboardPage';
 import AdminRolesPage from '@/src/pages/administrative/AdminRolesPage';
@@ -44,7 +52,8 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/select-module" element={<ModuleSelectionPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/solicitar-acceso" element={<RequestAccessPage />} />
+        <Route path="/register" element={<Navigate to="/solicitar-acceso" replace />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         
         {/* Dedicated Gestión Administrativa Routes */}
@@ -96,12 +105,14 @@ export default function App() {
           <Route index element={<AdminDashboardPage />} />
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="clients" element={<AdminClientsPage />} />
-          <Route path="users" element={<div className="p-8 text-white">Gestión de Usuarios Globales (Próximamente)</div>} />
-          <Route path="plans" element={<div className="p-8 text-white">Planes y Licencias (Próximamente)</div>} />
-          <Route path="modules" element={<div className="p-8 text-white">Módulos y Funciones (Próximamente)</div>} />
-          <Route path="rbac" element={<div className="p-8 text-white">Roles y Permisos Globales (Próximamente)</div>} />
-          <Route path="audit" element={<div className="p-8 text-white">Auditoría Global (Próximamente)</div>} />
-          <Route path="system" element={<div className="p-8 text-white">Configuración del Sistema (Próximamente)</div>} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="access-requests" element={<AdminAccessRequestsPage />} />
+          <Route path="plans" element={<AdminPlansLicensesPage />} />
+          <Route path="modules" element={<AdminModulesPage />} />
+          <Route path="rbac" element={<AdminRbacPage />} />
+          <Route path="audit" element={<AdminAuditPage />} />
+          <Route path="api" element={<AdminApiManagementPage />} />
+          <Route path="system" element={<AdminSystemDatabasePage />} />
           <Route path="system/database" element={<DatabaseSetupPage />} />
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>

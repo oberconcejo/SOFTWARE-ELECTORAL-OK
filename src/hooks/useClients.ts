@@ -35,37 +35,44 @@ export function useClients() {
 
     try {
       setLoading(true);
-      // Try with join first
-      const { data, error: fetchError } = await supabase
+      setError(null);
+
+      // 1. Fetch all clients
+      const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
-        .select(`
-          *,
-          client_api_usage (
-            total_assigned,
-            total_consumed,
-            last_query_at,
-            status
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (fetchError) {
-        // If error is about missing table, try without join
-        if (fetchError.code === 'PGRST205' || fetchError.message?.includes('does not exist')) {
-          console.warn('client_api_usage table missing, fetching clients without usage data');
-          const { data: simpleData, error: simpleError } = await supabase
-            .from('clients')
-            .select('*')
-            .order('created_at', { ascending: false });
-          
-          if (simpleError) throw simpleError;
-          setClients(simpleData || []);
-        } else {
-          throw fetchError;
+      if (clientsError) throw clientsError;
+
+      // 2. Fetch usage data in a safe decoupled query
+      let usageMap: Record<string, any> = {};
+      try {
+        const { data: usageData } = await supabase
+          .from('client_api_usage')
+          .select('client_id, total_assigned, total_consumed, last_query_at, status');
+
+        if (usageData && Array.isArray(usageData)) {
+          usageData.forEach((u: any) => {
+            if (u.client_id) {
+              usageMap[u.client_id] = u;
+            }
+          });
         }
-      } else {
-        setClients(data || []);
+      } catch (usageErr) {
+        console.warn('client_api_usage not accessible or table not created yet:', usageErr);
       }
+
+      // 3. Merge clients with their usage records
+      const mergedClients: Client[] = (clientsData || []).map((client: any) => {
+        const usage = usageMap[client.id];
+        return {
+          ...client,
+          client_api_usage: usage ? [usage] : []
+        };
+      });
+
+      setClients(mergedClients);
     } catch (err: any) {
       console.error('Error fetching clients:', err);
       setError(err.message);

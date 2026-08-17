@@ -190,6 +190,7 @@ export interface AuthState {
   error: string | null;
   isDatabaseConfigured: boolean;
   isSystemReady: boolean;
+  sessionToken?: string | null;
 }
 
 export interface Module {
@@ -287,6 +288,7 @@ export interface CustomRolePermission {
 export interface Leader {
   id: string;
   clientId: string;
+  user_id?: string;
   nombre: string;
   cedula: string;
   telefono?: string;
@@ -515,6 +517,22 @@ export interface PollingStationQueryRecord {
   fileName?: string;
   resultsSummary?: CitizenPollingPlace[];
   createdAt: string;
+}
+
+export interface AdminAccessRequest {
+  id: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  requestedUsername: string;
+  reason: string;
+  status: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'CANCELADA';
+  rejectionReason?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  ipAddress?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export * from './territorialDiagnostic';

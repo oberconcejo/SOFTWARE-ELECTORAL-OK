@@ -360,7 +360,219 @@ CREATE TABLE IF NOT EXISTS api_usage_transactions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 25. Solicitudes de Acceso de Administrador (SuperAdmin Review Queue)
+CREATE TABLE IF NOT EXISTS admin_access_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    full_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT,
+    requested_username TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    status TEXT DEFAULT 'PENDIENTE' CHECK (status IN ('PENDIENTE', 'APROBADA', 'RECHAZADA', 'CANCELADA')),
+    rejection_reason TEXT,
+    reviewed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    reviewed_at TIMESTAMPTZ,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- --- NUEVAS TABLAS PARA GESTIÓN ESTRATÉGICA Y REALISMO ---
+
+-- 26. Candidatos Detallados
+CREATE TABLE IF NOT EXISTS candidates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
+    nombre TEXT NOT NULL,
+    identificacion TEXT,
+    cargo TEXT,
+    partido TEXT,
+    territorio TEXT,
+    perfil_profesional TEXT,
+    propuesta_valor TEXT,
+    foto_url TEXT,
+    redes_sociales JSONB DEFAULT '{}',
+    status TEXT DEFAULT 'ACTIVE',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 27. Diagnósticos AI y Territoriales
+CREATE TABLE IF NOT EXISTS diagnostics (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
+    campaign_id UUID REFERENCES campaigns(id) ON DELETE CASCADE,
+    tipo TEXT NOT NULL CHECK (tipo IN ('360_AI', 'TERRITORIAL', 'SOCIAL_MEDIA')),
+    territorio_nombre TEXT,
+    metodologia TEXT,
+    resultados_json JSONB DEFAULT '{}',
+    conclusiones_ai TEXT,
+    estado TEXT DEFAULT 'COMPLETADO',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 28. Sectores de Diagnóstico
+CREATE TABLE IF NOT EXISTS sectors (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    diagnostic_id UUID REFERENCES diagnostics(id) ON DELETE CASCADE,
+    nombre TEXT NOT NULL,
+    descripcion TEXT,
+    prioridad TEXT CHECK (prioridad IN ('ALTA', 'MEDIA', 'BAJA')),
+    meta_general TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 29. Variables por Sector
+CREATE TABLE IF NOT EXISTS sector_variables (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sector_id UUID REFERENCES sectors(id) ON DELETE CASCADE,
+    nombre TEXT NOT NULL,
+    linea_base TEXT,
+    meta TEXT,
+    indicador TEXT,
+    fuente_dato TEXT,
+    prioridad TEXT DEFAULT 'MEDIA',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 30. Programas de Gobierno
+CREATE TABLE IF NOT EXISTS government_programs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
+    campaign_id UUID REFERENCES campaigns(id) ON DELETE CASCADE,
+    nombre TEXT NOT NULL,
+    periodo TEXT,
+    vision_general TEXT,
+    estado TEXT DEFAULT 'BORRADOR' CHECK (estado IN ('BORRADOR', 'REVISION', 'PUBLICADO')),
+    avance_porcentaje INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 31. Ejes Estratégicos
+CREATE TABLE IF NOT EXISTS strategic_axes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    program_id UUID REFERENCES government_programs(id) ON DELETE CASCADE,
+    nombre TEXT NOT NULL,
+    descripcion TEXT,
+    objetivo_principal TEXT,
+    prioridad INTEGER DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 32. Propuestas Detalladas
+CREATE TABLE IF NOT EXISTS proposals (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    axis_id UUID REFERENCES strategic_axes(id) ON DELETE CASCADE,
+    nombre TEXT NOT NULL,
+    descripcion TEXT,
+    problema_identificado TEXT,
+    objetivo_especifico TEXT,
+    indicador_cumplimiento TEXT,
+    meta_cuantitativa TEXT,
+    presupuesto_estimado NUMERIC(15,2) DEFAULT 0,
+    prioridad TEXT DEFAULT 'ALTA',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 33. Matriz DOFA / SWOT
+CREATE TABLE IF NOT EXISTS swot_matrices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
+    campaign_id UUID REFERENCES campaigns(id) ON DELETE CASCADE,
+    fortalezas TEXT[] DEFAULT '{}',
+    oportunidades TEXT[] DEFAULT '{}',
+    debilidades TEXT[] DEFAULT '{}',
+    amenazas TEXT[] DEFAULT '{}',
+    conclusiones_ai TEXT,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 34. Fichas Territoriales (Micro-localización)
+CREATE TABLE IF NOT EXISTS territorial_fiches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
+    comuna_corregimiento TEXT NOT NULL,
+    barrio_vereda TEXT,
+    problema_principal TEXT,
+    propuesta_solucion TEXT,
+    impacto_esperado TEXT,
+    sector_relacionado TEXT,
+    lider_responsable_id UUID REFERENCES leaders(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 35. Seguimiento de Comunicación y Redes
+CREATE TABLE IF NOT EXISTS communication_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
+    plataforma TEXT NOT NULL,
+    tipo_contenido TEXT,
+    contenido_texto TEXT,
+    url_publicacion TEXT,
+    metricas_json JSONB DEFAULT '{}',
+    sentimiento_ai TEXT,
+    fecha_publicacion TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 36. Agenda y Calendario de Campaña
+CREATE TABLE IF NOT EXISTS campaign_calendar (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
+    titulo TEXT NOT NULL,
+    descripcion TEXT,
+    tipo_evento TEXT CHECK (tipo_evento IN ('REUNION', 'MITIN', 'ENTREVISTA', 'VISITA_TERRITORIAL', 'OTRO')),
+    fecha_inicio TIMESTAMPTZ NOT NULL,
+    fecha_fin TIMESTAMPTZ,
+    ubicacion TEXT,
+    latitud NUMERIC(10,8),
+    longitud NUMERIC(11,8),
+    responsable_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    estado TEXT DEFAULT 'PROGRAMADO' CHECK (estado IN ('PROGRAMADO', 'REALIZADO', 'CANCELADO')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- --- ÍNDICES ADICIONALES ---
+CREATE INDEX IF NOT EXISTS idx_candidates_client ON candidates(client_id);
+CREATE INDEX IF NOT EXISTS idx_diagnostics_client ON diagnostics(client_id);
+CREATE INDEX IF NOT EXISTS idx_gov_programs_client ON government_programs(client_id);
+CREATE INDEX IF NOT EXISTS idx_swot_client ON swot_matrices(client_id);
+CREATE INDEX IF NOT EXISTS idx_territorial_fiches_client ON territorial_fiches(client_id);
+CREATE INDEX IF NOT EXISTS idx_comm_logs_client ON communication_logs(client_id);
+CREATE INDEX IF NOT EXISTS idx_calendar_client ON campaign_calendar(client_id);
+
+-- --- RLS PARA NUEVAS TABLAS ---
+ALTER TABLE candidates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE diagnostics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sectors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sector_variables ENABLE ROW LEVEL SECURITY;
+ALTER TABLE government_programs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE strategic_axes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE proposals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE swot_matrices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE territorial_fiches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE communication_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE campaign_calendar ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY candidates_isolation ON candidates FOR ALL USING (client_id = get_user_client_id() OR is_superadmin());
+CREATE POLICY diagnostics_isolation ON diagnostics FOR ALL USING (client_id = get_user_client_id() OR is_superadmin());
+CREATE POLICY sectors_isolation ON sectors FOR ALL USING (EXISTS (SELECT 1 FROM diagnostics WHERE diagnostics.id = sectors.diagnostic_id AND (diagnostics.client_id = get_user_client_id() OR is_superadmin())));
+CREATE POLICY variables_isolation ON sector_variables FOR ALL USING (EXISTS (SELECT 1 FROM sectors JOIN diagnostics ON sectors.diagnostic_id = diagnostics.id WHERE sector_variables.sector_id = sectors.id AND (diagnostics.client_id = get_user_client_id() OR is_superadmin())));
+CREATE POLICY gov_programs_isolation ON government_programs FOR ALL USING (client_id = get_user_client_id() OR is_superadmin());
+CREATE POLICY strategic_axes_isolation ON strategic_axes FOR ALL USING (EXISTS (SELECT 1 FROM government_programs WHERE government_programs.id = strategic_axes.program_id AND (government_programs.client_id = get_user_client_id() OR is_superadmin())));
+CREATE POLICY proposals_isolation ON proposals FOR ALL USING (EXISTS (SELECT 1 FROM strategic_axes JOIN government_programs ON strategic_axes.program_id = government_programs.id WHERE proposals.axis_id = strategic_axes.id AND (government_programs.client_id = get_user_client_id() OR is_superadmin())));
+CREATE POLICY swot_isolation ON swot_matrices FOR ALL USING (client_id = get_user_client_id() OR is_superadmin());
+CREATE POLICY territorial_fiches_isolation ON territorial_fiches FOR ALL USING (client_id = get_user_client_id() OR is_superadmin());
+CREATE POLICY comm_logs_isolation ON communication_logs FOR ALL USING (client_id = get_user_client_id() OR is_superadmin());
+CREATE POLICY calendar_isolation ON campaign_calendar FOR ALL USING (client_id = get_user_client_id() OR is_superadmin());
+
+-- --- SEED DATA INICIAL ---
+
 -- --- ÍNDICES DE RENDIMIENTO ---
+CREATE INDEX IF NOT EXISTS idx_admin_requests_email ON admin_access_requests(email);
+CREATE INDEX IF NOT EXISTS idx_admin_requests_status ON admin_access_requests(status);
 CREATE INDEX IF NOT EXISTS idx_profiles_client ON profiles(client_id);
 CREATE INDEX IF NOT EXISTS idx_voters_client ON voters(client_id);
 CREATE INDEX IF NOT EXISTS idx_voters_lider ON voters(lider_id);

@@ -47,7 +47,7 @@ export function TerritorialDiagnostic() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
-      className="space-y-8"
+      className="space-y-6"
     >
       {/* Global Error Banner if any */}
       {error && (

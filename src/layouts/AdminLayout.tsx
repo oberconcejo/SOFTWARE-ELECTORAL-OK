@@ -15,10 +15,13 @@ import {
   CreditCard,
   Layers,
   FileText,
+  Cpu,
+  UserCheck,
   X
 } from 'lucide-react';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
+import { AppLogo } from '@/src/components/common/AppLogo';
 
 export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
@@ -29,10 +32,12 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Clientes', path: '/admin/clients', icon: Globe },
     { name: 'Usuarios Globales', path: '/admin/users', icon: Users },
+    { name: 'Solicitudes de Admins', path: '/admin/access-requests', icon: UserCheck },
     { name: 'Planes y Licencias', path: '/admin/plans', icon: CreditCard },
     { name: 'Módulos y Funciones', path: '/admin/modules', icon: Layers },
     { name: 'Roles y Permisos', path: '/admin/rbac', icon: ShieldCheck },
     { name: 'Auditoría', path: '/admin/audit', icon: FileText },
+    { name: 'Administración de API', path: '/admin/api', icon: Cpu },
     { name: 'Sistema y DB', path: '/admin/system', icon: Database },
   ];
 
@@ -56,14 +61,18 @@ export const AdminLayout: React.FC<{ children?: React.ReactNode }> = ({ children
         fixed lg:sticky top-0 left-0 h-screen w-72 bg-[#111114] border-r border-white/5 flex flex-col shrink-0 z-50 transition-transform duration-300
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className="p-8 border-b border-white/5 flex items-center justify-between">
+        <div className="p-6 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center">
-              <ShieldCheck className="w-6 h-6 text-white" />
-            </div>
+            <AppLogo 
+              size="sm" 
+              variant="admin" 
+              animated={true} 
+              floating={true}
+              showGlowHalo={true} 
+            />
             <div>
               <h2 className="text-sm font-bold text-white tracking-tight uppercase">SUPERADMIN</h2>
-              <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">Global Panel</p>
+              <p className="text-[10px] text-rose-400/80 font-bold tracking-widest uppercase">Global Panel</p>
             </div>
           </div>
           <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-500 hover:text-white">

@@ -29,8 +29,13 @@ import { Button } from '@/src/components/ui/Button';
 import { Badge } from '@/src/components/ui/Badge';
 import { cn } from '@/src/lib/utils';
 import { SWOTSection } from '@/src/modules/strategy/components/SWOTSection';
+import { CandidateProfileSection } from '@/src/modules/strategy/components/CandidateProfileSection';
 import { TerritorialDiagnostic } from '@/src/modules/strategy/components/TerritorialDiagnostic';
 import { GovProgramSection } from '@/src/modules/strategy/components/GovProgramSection';
+import { Diagnostic360Section } from '@/src/modules/strategy/components/Diagnostic360Section';
+import { CommunicationsSection } from '@/src/modules/strategy/components/CommunicationsSection';
+import { DataAnalysisSection } from '@/src/modules/strategy/components/DataAnalysisSection';
+import { AgendaCalendarSection } from '@/src/modules/strategy/components/AgendaCalendarSection';
 
 type StrategyTab = 
   | 'diagnostic360'
@@ -101,14 +106,6 @@ export default function StrategyPage() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-1.5 tracking-tight">Gestión Estratégica</h1>
-          <p className="text-slate-400 text-sm font-medium">Inteligencia y planeación táctica para la toma de decisiones.</p>
-        </div>
-      </div>
-
       {/* Tab Content Driven from Vertical Sidebar */}
       <AnimatePresence mode="wait">
         {/* 1. Diagnóstico 360° AI */}
@@ -120,30 +117,7 @@ export default function StrategyPage() {
             exit={{ opacity: 0, y: -15 }}
             className="space-y-6"
           >
-            <Card className="rounded-[32px] bg-[#111114] border-white/5 p-8 shadow-xl">
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">Diagnóstico 360° AI</h3>
-                    <p className="text-xs text-slate-500 font-medium">Evaluación integral del contexto político, electoral y competitivo</p>
-                  </div>
-                </div>
-                <Badge variant="primary" className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
-                  Fase Estratégica Activa
-                </Badge>
-              </div>
-
-              <div className="p-12 text-center bg-white/[0.01] rounded-[28px] border border-dashed border-white/5 space-y-3">
-                <Sparkles className="w-12 h-12 text-slate-700 mx-auto" />
-                <h4 className="text-lg font-bold text-slate-400">Sin diagnóstico 360° generado todavía</h4>
-                <p className="text-sm text-slate-500 max-w-md mx-auto">
-                  Aún no existen análisis generados para este periodo. El diagnóstico integral se procesará automáticamente al consolidar las variables de campaña.
-                </p>
-              </div>
-            </Card>
+            <Diagnostic360Section />
           </motion.div>
         )}
 
@@ -156,21 +130,7 @@ export default function StrategyPage() {
             exit={{ opacity: 0, y: -15 }}
             className="space-y-6"
           >
-            <Card className="rounded-[32px] bg-[#111114] border-white/5 p-8 shadow-xl">
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-                    <MapPin className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">Diagnóstico Territorial</h3>
-                    <p className="text-xs text-slate-500 font-medium">Herramienta de análisis estratégico del territorio, comunas y necesidades</p>
-                  </div>
-                </div>
-              </div>
-
-              <TerritorialDiagnostic />
-            </Card>
+            <TerritorialDiagnostic />
           </motion.div>
         )}
 
@@ -196,83 +156,7 @@ export default function StrategyPage() {
             exit={{ opacity: 0, y: -15 }}
             className="space-y-6"
           >
-            <Card className="rounded-[32px] bg-[#111114] border-white/5 p-8 shadow-xl">
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-                    <User className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">Perfil del Candidato</h3>
-                    <p className="text-xs text-slate-500 font-medium">Ficha biográfica, experiencia y posicionamiento de liderazgo</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4 bg-white/5 p-6 rounded-2xl border border-white/5">
-                  <h4 className="text-sm font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
-                    <Award className="w-4 h-4" /> Datos de Liderazgo
-                  </h4>
-                  <div>
-                    <label className="block text-xs text-slate-500 font-bold uppercase mb-1">Nombre Completo</label>
-                    <input 
-                      type="text" 
-                      value={candidateData.name}
-                      onChange={(e) => setCandidateData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Ingrese nombre del candidato..."
-                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-500 font-bold uppercase mb-1">Lema / Slogan</label>
-                    <input 
-                      type="text" 
-                      value={candidateData.tagline}
-                      onChange={(e) => setCandidateData(prev => ({ ...prev, tagline: e.target.value }))}
-                      placeholder="Lema oficial de campaña..."
-                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-500 font-bold uppercase mb-1">Profesión / Especialidad</label>
-                    <input 
-                      type="text" 
-                      value={candidateData.profession}
-                      onChange={(e) => setCandidateData(prev => ({ ...prev, profession: e.target.value }))}
-                      placeholder="Formación y especialidad..."
-                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4 bg-white/5 p-6 rounded-2xl border border-white/5">
-                  <h4 className="text-sm font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
-                    <Briefcase className="w-4 h-4" /> Trayectoria y Fortalezas
-                  </h4>
-                  <div>
-                    <label className="block text-xs text-slate-500 font-bold uppercase mb-1">Resumen de Experiencia</label>
-                    <textarea 
-                      value={candidateData.experience}
-                      onChange={(e) => setCandidateData(prev => ({ ...prev, experience: e.target.value }))}
-                      placeholder="Experiencia en el sector público o privado..."
-                      rows={3}
-                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-500 font-bold uppercase mb-1">Principales Fortalezas Electorales</label>
-                    <textarea 
-                      value={candidateData.strengths}
-                      onChange={(e) => setCandidateData(prev => ({ ...prev, strengths: e.target.value }))}
-                      placeholder="Puntos fuertes identificados en el liderazgo..."
-                      rows={3}
-                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            </Card>
+            <CandidateProfileSection />
           </motion.div>
         )}
 
@@ -456,27 +340,7 @@ export default function StrategyPage() {
             exit={{ opacity: 0, y: -15 }}
             className="space-y-6"
           >
-            <Card className="rounded-[32px] bg-[#111114] border-white/5 p-8 shadow-xl">
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-                    <Radio className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">Comunicación & Redes</h3>
-                    <p className="text-xs text-slate-500 font-medium">Estrategia de medios, prensa, canales y vocerías institucionales</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-12 text-center bg-white/[0.01] rounded-[28px] border border-dashed border-white/5 space-y-3">
-                <Radio className="w-12 h-12 text-slate-700 mx-auto" />
-                <h4 className="text-lg font-bold text-slate-400">No hay información disponible todavía</h4>
-                <p className="text-sm text-slate-500 max-w-md mx-auto">
-                  Aún no existen planes de medios o campañas de comunicación registrados. Los cronogramas de publicación y vocerías aparecerán en esta sección.
-                </p>
-              </div>
-            </Card>
+            <CommunicationsSection />
           </motion.div>
         )}
 
@@ -489,27 +353,7 @@ export default function StrategyPage() {
             exit={{ opacity: 0, y: -15 }}
             className="space-y-6"
           >
-            <Card className="rounded-[32px] bg-[#111114] border-white/5 p-8 shadow-xl">
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-                    <BarChart3 className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">Análisis de Datos AI</h3>
-                    <p className="text-xs text-slate-500 font-medium">Inteligencia de datos cuantitativa, correlaciones y tendencias electorales</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-12 text-center bg-white/[0.01] rounded-[28px] border border-dashed border-white/5 space-y-3">
-                <BarChart3 className="w-12 h-12 text-slate-700 mx-auto" />
-                <h4 className="text-lg font-bold text-slate-400">No hay información disponible todavía</h4>
-                <p className="text-sm text-slate-500 max-w-md mx-auto">
-                  Aún no existen análisis estadísticos o correlaciones procesadas. Los informes aparecerán a medida que se consolide la información de campo.
-                </p>
-              </div>
-            </Card>
+            <DataAnalysisSection />
           </motion.div>
         )}
 
@@ -522,27 +366,7 @@ export default function StrategyPage() {
             exit={{ opacity: 0, y: -15 }}
             className="space-y-6"
           >
-            <Card className="rounded-[32px] bg-[#111114] border-white/5 p-8 shadow-xl">
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-                    <Calendar className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">Agenda & Calendario</h3>
-                    <p className="text-xs text-slate-500 font-medium">Hitos de campaña, debates, giras y fechas electorales estratégicas</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-12 text-center bg-white/[0.01] rounded-[28px] border border-dashed border-white/5 space-y-3">
-                <Calendar className="w-12 h-12 text-slate-700 mx-auto" />
-                <h4 className="text-lg font-bold text-slate-400">No hay información disponible todavía</h4>
-                <p className="text-sm text-slate-500 max-w-md mx-auto">
-                  Aún no se han programado eventos o hitos en el calendario estratégico de campaña.
-                </p>
-              </div>
-            </Card>
+            <AgendaCalendarSection />
           </motion.div>
         )}
       </AnimatePresence>

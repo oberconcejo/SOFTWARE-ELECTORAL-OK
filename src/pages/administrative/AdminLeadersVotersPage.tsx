@@ -17,7 +17,9 @@ import {
   FileSpreadsheet,
   Trash2,
   Edit2,
-  Loader2
+  Loader2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/src/contexts/AuthContext';
@@ -51,8 +53,13 @@ export default function AdminLeadersVotersPage() {
     subdivisionId: '',
     puesto: '',
     mesa: '',
-    metaVotos: 50
+    metaVotos: 50,
+    password: '',
+    confirmPassword: ''
   });
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Voter Form
   const [voterForm, setVoterForm] = useState({
@@ -102,8 +109,30 @@ export default function AdminLeadersVotersPage() {
 
   const handleSaveLeader = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validations
     if (!leaderForm.nombre.trim() || !leaderForm.cedula.trim()) {
       setMessage({ text: 'Nombre y Cédula son obligatorios', type: 'error' });
+      return;
+    }
+
+    if (!leaderForm.password) {
+      setMessage({ text: 'La contraseña es obligatoria', type: 'error' });
+      return;
+    }
+
+    if (!leaderForm.confirmPassword) {
+      setMessage({ text: 'Confirma la contraseña', type: 'error' });
+      return;
+    }
+
+    if (leaderForm.password !== leaderForm.confirmPassword) {
+      setMessage({ text: 'Las contraseñas no coinciden', type: 'error' });
+      return;
+    }
+
+    if (leaderForm.password.length < 6) {
+      setMessage({ text: 'La contraseña debe tener al menos 6 caracteres', type: 'error' });
       return;
     }
 
@@ -111,29 +140,33 @@ export default function AdminLeadersVotersPage() {
     setMessage(null);
 
     try {
-      const clientId = user?.tenantId || client?.id;
-      const selectedZone = zones.find(z => z.id === leaderForm.zoneId);
-      const selectedSub = subdivisions.find(s => s.id === leaderForm.subdivisionId);
-
-      const { error } = await supabase.from('leaders').insert([
-        {
-          client_id: clientId,
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch('/api/admin/leaders/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({
           nombre: leaderForm.nombre.trim(),
           cedula: leaderForm.cedula.trim(),
           telefono: leaderForm.telefono.trim(),
           email: leaderForm.email.trim(),
-          zone_id: leaderForm.zoneId || null,
-          subdivision_id: leaderForm.subdivisionId || null,
-          comuna: selectedZone?.nombre || '',
-          barrio: selectedSub?.nombre || '',
+          zoneId: leaderForm.zoneId || null,
+          subdivisionId: leaderForm.subdivisionId || null,
           puesto: leaderForm.puesto.trim(),
           mesa: leaderForm.mesa.trim(),
-          meta_votos: Number(leaderForm.metaVotos) || 50,
-          status: 'ACTIVE'
-        }
-      ]);
+          metaVotos: Number(leaderForm.metaVotos) || 50,
+          password: leaderForm.password
+        })
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Error al guardar líder');
+      }
 
       setMessage({ text: 'Líder registrado con éxito', type: 'success' });
       await refresh();
@@ -146,7 +179,9 @@ export default function AdminLeadersVotersPage() {
         subdivisionId: '',
         puesto: '',
         mesa: '',
-        metaVotos: 50
+        metaVotos: 50,
+        password: '',
+        confirmPassword: ''
       });
       setTimeout(() => {
         setIsLeaderModalOpen(false);
@@ -594,6 +629,49 @@ export default function AdminLeadersVotersPage() {
                     onChange={(e) => setLeaderForm({ ...leaderForm, metaVotos: Number(e.target.value) })}
                     className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-indigo-500 outline-none"
                   />
+                </div>
+
+                {/* Password Fields */}
+                <div className="relative">
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Contraseña *</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      placeholder="Ingrese una contraseña"
+                      value={leaderForm.password}
+                      onChange={(e) => setLeaderForm({ ...leaderForm, password: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 pr-10 text-xs text-white focus:border-indigo-500 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Confirmar Contraseña *</label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      required
+                      placeholder="Repita la contraseña"
+                      value={leaderForm.confirmPassword}
+                      onChange={(e) => setLeaderForm({ ...leaderForm, confirmPassword: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 pr-10 text-xs text-white focus:border-indigo-500 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
               </div>
 

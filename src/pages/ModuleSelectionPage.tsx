@@ -7,9 +7,9 @@ import {
   MapIcon, 
   Target, 
   ArrowRight,
-  Hexagon,
   AlertCircle
 } from 'lucide-react';
+import { AppLogo } from '@/src/components/common/AppLogo';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 
@@ -109,12 +109,16 @@ export default function ModuleSelectionPage() {
       >
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
-            <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
-              <Hexagon className="w-8 h-8 text-indigo-500" />
-            </div>
+            <AppLogo 
+              size="xl" 
+              variant="brand" 
+              animated={true} 
+              floating={true}
+              showGlowHalo={true} 
+            />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-4">INICIAR SESIÓN</h1>
-          <p className="text-slate-400 text-lg">¿A qué módulo desea ingresar?</p>
+          <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">INICIAR SESIÓN</h1>
+          <p className="text-slate-400 text-base">Selecciona el módulo electoral al que deseas ingresar</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

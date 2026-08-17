@@ -107,195 +107,87 @@ export function useGovernmentProgram() {
 
   // Load all initial program data
   const loadData = useCallback(async () => {
+    if (!supabase || !tenantId || tenantId === 'default_tenant') {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      let loadedProgram: GovProgramInfo | null = null;
-      let loadedAxes: GovStrategicAxis[] = [];
-      let loadedProposals: GovProposal[] = [];
-      let loadedLegal: GovLegalRequirement[] = [];
+      // 1. Authoritative Supabase fetch
+      const [progRes, axesRes, propRes] = await Promise.all([
+        supabase.from('government_programs').select('*').eq('client_id', tenantId).maybeSingle(),
+        supabase.from('strategic_axes').select('*').order('prioridad', { ascending: true }),
+        supabase.from('proposals').select('*').order('created_at', { ascending: true })
+      ]);
 
-      // 1. Attempt Supabase fetch
-      if (supabase && tenantId) {
-        try {
-          const [progRes, axesRes, propRes, legalRes] = await Promise.allSettled([
-            supabase.from('government_programs').select('*').eq('client_id', tenantId).maybeSingle(),
-            supabase.from('gov_strategic_axes').select('*').eq('client_id', tenantId).order('order_index', { ascending: true }),
-            supabase.from('gov_proposals').select('*').eq('client_id', tenantId).order('created_at', { ascending: true }),
-            supabase.from('gov_legal_requirements').select('*').eq('client_id', tenantId)
-          ]);
-
-          if (progRes.status === 'fulfilled' && progRes.value.data) {
-            const p = progRes.value.data;
-            loadedProgram = {
-              id: p.id,
-              clientId: p.client_id,
-              title: p.title || '',
-              period: p.period || '',
-              territory: p.territory || '',
-              candidateName: p.candidate_name || '',
-              partyCoalition: p.party_coalition || '',
-              slogan: p.slogan || '',
-              status: p.status || 'BORRADOR',
-              legalDeadline: p.legal_deadline || '',
-              historicalContext: p.historical_context || '',
-              diagnosticSummary: p.diagnostic_summary || '',
-              lastSyncDate: p.last_sync_date || null,
-              createdAt: p.created_at,
-              updatedAt: p.updated_at
-            };
-          }
-
-          if (axesRes.status === 'fulfilled' && axesRes.value.data && Array.isArray(axesRes.value.data)) {
-            loadedAxes = axesRes.value.data.map((a: any) => ({
-              id: a.id,
-              programId: a.program_id,
-              clientId: a.client_id,
-              axisNumber: a.axis_number || 1,
-              name: a.name,
-              description: a.description || '',
-              generalObjective: a.general_objective || '',
-              diagnosedProblem: a.diagnosed_problem || '',
-              category: a.category || '',
-              iconName: a.icon_name || 'Target',
-              color: a.color || '#6366f1',
-              orderIndex: a.order_index ?? 0,
-              status: a.status || 'ACTIVO',
-              createdAt: a.created_at,
-              updatedAt: a.updated_at
-            }));
-          }
-
-          if (propRes.status === 'fulfilled' && propRes.value.data && Array.isArray(propRes.value.data)) {
-            loadedProposals = propRes.value.data.map((pr: any) => ({
-              id: pr.id,
-              axisId: pr.axis_id,
-              programId: pr.program_id,
-              clientId: pr.client_id,
-              code: pr.code,
-              title: pr.title,
-              description: pr.description || '',
-              relatedProblem: pr.related_problem || '',
-              objective: pr.objective || '',
-              indicatorName: pr.indicator_name || '',
-              indicatorUnit: pr.indicator_unit || '',
-              baselineValue: pr.baseline_value,
-              targetValue: pr.target_value,
-              timeframe: pr.timeframe || 'CUATRIENAL',
-              estimatedBudget: pr.estimated_budget != null ? Number(pr.estimated_budget) : null,
-              currency: pr.currency || 'COP',
-              priority: pr.priority || 'ALTA',
-              territoryScope: pr.territory_scope || '',
-              fundingSource: pr.funding_source || '',
-              sourceDiagnosticFicheId: pr.source_diagnostic_fiche_id,
-              createdAt: pr.created_at,
-              updatedAt: pr.updated_at
-            }));
-          }
-
-          if (legalRes.status === 'fulfilled' && legalRes.value.data && Array.isArray(legalRes.value.data) && legalRes.value.data.length > 0) {
-            loadedLegal = legalRes.value.data.map((l: any) => ({
-              id: l.id,
-              code: l.code,
-              requirement: l.requirement,
-              description: l.description,
-              legalBasis: l.legal_basis,
-              status: l.status,
-              missingItems: l.missing_items,
-              observations: l.observations
-            }));
-          }
-        } catch (e) {
-          console.warn('Database fetch bypassed, using local tenant storage:', e);
-        }
-      }
-
-      // 2. Fallback to LocalStorage
-      if (!loadedProgram) {
-        const storedProg = localStorage.getItem(PROGRAM_KEY);
-        if (storedProg) {
-          try {
-            loadedProgram = JSON.parse(storedProg);
-          } catch (e) {
-            console.error('Error parsing stored program info', e);
-          }
-        }
-      }
-
-      if (loadedAxes.length === 0) {
-        const storedAxes = localStorage.getItem(AXES_KEY);
-        if (storedAxes) {
-          try {
-            loadedAxes = JSON.parse(storedAxes);
-          } catch (e) {
-            console.error('Error parsing stored axes', e);
-          }
-        }
-      }
-
-      if (loadedProposals.length === 0) {
-        const storedProps = localStorage.getItem(PROPOSALS_KEY);
-        if (storedProps) {
-          try {
-            loadedProposals = JSON.parse(storedProps);
-          } catch (e) {
-            console.error('Error parsing stored proposals', e);
-          }
-        }
-      }
-
-      if (loadedLegal.length === 0) {
-        const storedLegal = localStorage.getItem(LEGAL_KEY);
-        if (storedLegal) {
-          try {
-            loadedLegal = JSON.parse(storedLegal);
-          } catch (e) {
-            console.error('Error parsing stored legal matrix', e);
-          }
-        }
-      }
-
-      // If still no program, check if we can initialize from Client or CampaignData without inventing fake data
-      if (loadedProgram) {
-        setProgramInfo(loadedProgram);
-      } else {
-        const initialProg: GovProgramInfo = {
-          id: `gov_prog_${tenantId}`,
-          clientId: tenantId,
-          title: '',
-          period: '',
-          territory: '',
-          candidateName: '',
+      if (progRes.data) {
+        const p = progRes.data;
+        setProgramInfo({
+          id: p.id,
+          clientId: p.client_id,
+          title: p.nombre || '',
+          period: p.periodo || '',
+          territory: p.territorio || '',
+          candidateName: '', // Link to candidates table if needed
           partyCoalition: '',
           slogan: '',
-          status: 'BORRADOR',
+          status: p.estado || 'BORRADOR',
           legalDeadline: '',
-          historicalContext: '',
+          historicalContext: p.vision_general || '',
           diagnosticSummary: '',
-          lastSyncDate: null,
-          createdAt: new Date().toISOString()
-        };
-        setProgramInfo(initialProg);
+          lastSyncDate: p.updated_at || null,
+          createdAt: p.created_at,
+          updatedAt: p.updated_at
+        });
       }
 
-      setAxes(loadedAxes);
-      if (loadedAxes.length > 0) {
-        setSelectedAxisId(loadedAxes[0].id);
-      } else {
-        setSelectedAxisId(null);
+      if (axesRes.data) {
+        setAxes(axesRes.data.map((a: any) => ({
+          id: a.id,
+          programId: a.program_id,
+          clientId: tenantId,
+          axisNumber: a.prioridad || 1,
+          name: a.nombre,
+          description: a.descripcion || '',
+          generalObjective: a.objetivo_principal || '',
+          status: 'ACTIVO',
+          createdAt: a.created_at
+        })));
+        
+        if (axesRes.data.length > 0 && !selectedAxisId) {
+          setSelectedAxisId(axesRes.data[0].id);
+        }
       }
 
-      setProposals(loadedProposals);
-      setLegalRequirements(loadedLegal.length > 0 ? loadedLegal : DEFAULT_LEGAL_REQUIREMENTS);
+      if (propRes.data) {
+        setProposals(propRes.data.map((pr: any) => ({
+          id: pr.id,
+          axisId: pr.axis_id,
+          programId: '', 
+          clientId: tenantId,
+          code: pr.id.slice(0, 5),
+          title: pr.nombre,
+          description: pr.descripcion || '',
+          relatedProblem: pr.problema_identificado || '',
+          objective: pr.objetivo_especifico || '',
+          indicatorName: pr.indicador_cumplimiento || '',
+          targetValue: pr.meta_cuantitativa,
+          estimatedBudget: pr.presupuesto_estimado != null ? Number(pr.presupuesto_estimado) : null,
+          priority: pr.prioridad || 'ALTA',
+          createdAt: pr.created_at
+        })));
+      }
 
     } catch (err: any) {
       console.error('Error loading government program:', err);
-      setError('No fue posible cargar el Programa de Gobierno. Intente nuevamente.');
+      setError('No fue posible cargar el Programa de Gobierno real.');
     } finally {
       setLoading(false);
     }
-  }, [tenantId, PROGRAM_KEY, AXES_KEY, PROPOSALS_KEY, LEGAL_KEY]);
+  }, [tenantId, selectedAxisId]);
 
   useEffect(() => {
     loadData();
@@ -422,7 +314,7 @@ export function useGovernmentProgram() {
     };
   }, [axes, proposals, programInfo, computedLegalRequirements]);
 
-  // Sincronización real con módulos existentes (Gestión Estratégica, Candidato, Diagnóstico Territorial)
+  // Sincronización real con módulos existentes
   const resyncAllData = useCallback(async () => {
     setIsSyncing(true);
     setSyncStatus('IDLE');
@@ -431,142 +323,70 @@ export function useGovernmentProgram() {
     try {
       let syncedCandidate = '';
       let syncedTerritory = '';
-      let syncedSlogan = '';
-      let syncedParty = '';
-      let syncedDiagnosticNotes = '';
-      let linkedFichesCount = 0;
 
-      // Check campaigns table or administrative data
       if (supabase && tenantId) {
-        try {
-          const { data: campaignData } = await supabase
-            .from('campaigns')
-            .select('*')
-            .eq('client_id', tenantId)
-            .maybeSingle();
+        const { data: campaignData } = await supabase
+          .from('campaigns')
+          .select('*')
+          .eq('client_id', tenantId)
+          .maybeSingle();
 
-          if (campaignData) {
-            if (campaignData.candidato_nombre) syncedCandidate = campaignData.candidato_nombre;
-            if (campaignData.municipio || campaignData.departamento) {
-              syncedTerritory = [campaignData.municipio, campaignData.departamento].filter(Boolean).join(', ');
-            }
+        if (campaignData) {
+          if (campaignData.candidato_nombre) syncedCandidate = campaignData.candidato_nombre;
+          if (campaignData.municipio || campaignData.departamento) {
+            syncedTerritory = [campaignData.municipio, campaignData.departamento].filter(Boolean).join(', ');
           }
-        } catch (e) {
-          console.warn('Could not sync from campaigns table:', e);
         }
+
+        const syncTimestamp = new Date().toISOString();
+
+        await supabase.from('government_programs').upsert({
+          client_id: tenantId,
+          nombre: programInfo.title || 'Plan de Gobierno',
+          territorio: programInfo.territory || syncedTerritory,
+          estado: programInfo.status,
+          updated_at: syncTimestamp
+        });
+
+        await loadData();
       }
-
-      // Check territorial diagnostic from local storage if available
-      const fichesKey = `territorial_fiches_${tenantId}`;
-      const storedFiches = localStorage.getItem(fichesKey);
-      if (storedFiches) {
-        try {
-          const parsedFiches: MicroLocalFiche[] = JSON.parse(storedFiches);
-          const govLinked = parsedFiches.filter(f => f.isLinkedToGovProgram);
-          linkedFichesCount = govLinked.length;
-
-          if (govLinked.length > 0) {
-            syncedDiagnosticNotes = `Insumos territoriales priorizados: ${govLinked.length} problemática(s) y propuesta(s) registradas desde Diagnóstico Territorial.`;
-          }
-        } catch (e) {
-          console.warn('Could not read territorial fiches for sync:', e);
-        }
-      }
-
-      const syncTimestamp = new Date().toISOString();
-
-      setProgramInfo(prev => {
-        const updated: GovProgramInfo = {
-          ...prev,
-          candidateName: prev.candidateName || syncedCandidate,
-          territory: prev.territory || syncedTerritory,
-          partyCoalition: prev.partyCoalition || syncedParty,
-          slogan: prev.slogan || syncedSlogan,
-          diagnosticSummary: prev.diagnosticSummary || (syncedDiagnosticNotes || prev.diagnosticSummary),
-          lastSyncDate: syncTimestamp,
-          updatedAt: syncTimestamp
-        };
-        localStorage.setItem(PROGRAM_KEY, JSON.stringify(updated));
-        return updated;
-      });
 
       setSyncStatus('SYNCED');
-      setSyncMessage(
-        linkedFichesCount > 0 
-          ? `Sincronización completada con éxito. ${linkedFichesCount} insumo(s) del Diagnóstico Territorial disponibles.`
-          : 'Sincronización de datos completada con el perfil de campaña y diagnóstico territorial.'
-      );
-
-      // Persist to Supabase if connected
-      if (supabase && tenantId) {
-        try {
-          await supabase.from('government_programs').upsert({
-            id: programInfo.id,
-            client_id: tenantId,
-            title: programInfo.title,
-            period: programInfo.period,
-            territory: programInfo.territory || syncedTerritory,
-            candidate_name: programInfo.candidateName || syncedCandidate,
-            party_coalition: programInfo.partyCoalition || syncedParty,
-            slogan: programInfo.slogan || syncedSlogan,
-            status: programInfo.status,
-            last_sync_date: syncTimestamp,
-            updated_at: syncTimestamp
-          });
-        } catch (e) {
-          console.warn('Could not upsert synced program to DB:', e);
-        }
-      }
+      setSyncMessage('Sincronización de datos completada con el perfil de campaña y base de datos.');
 
     } catch (err: any) {
       console.error('Error during resync:', err);
       setSyncStatus('ERROR');
-      setSyncMessage('No fue posible sincronizar los datos. Intenta nuevamente.');
+      setSyncMessage('No fue posible sincronizar los datos.');
     } finally {
       setIsSyncing(false);
     }
-  }, [tenantId, PROGRAM_KEY, programInfo]);
+  }, [tenantId, programInfo, loadData]);
 
   // Update General Info
   const updateGeneralInfo = useCallback(async (data: Partial<GovProgramInfo>) => {
     try {
-      const updated: GovProgramInfo = {
-        ...programInfo,
-        ...data,
-        updatedAt: new Date().toISOString()
-      };
-
-      setProgramInfo(updated);
-      localStorage.setItem(PROGRAM_KEY, JSON.stringify(updated));
-
       if (supabase && tenantId) {
-        try {
-          await supabase.from('government_programs').upsert({
-            id: updated.id,
-            client_id: tenantId,
-            title: updated.title,
-            period: updated.period,
-            territory: updated.territory,
-            candidate_name: updated.candidateName,
-            party_coalition: updated.partyCoalition,
-            slogan: updated.slogan,
-            status: updated.status,
-            legal_deadline: updated.legalDeadline,
-            historical_context: updated.historicalContext,
-            diagnostic_summary: updated.diagnosticSummary,
-            last_sync_date: updated.lastSyncDate,
-            updated_at: updated.updatedAt
-          });
-        } catch (e) {
-          console.warn('Could not update general info in DB:', e);
-        }
+        const syncTimestamp = new Date().toISOString();
+        const { error: upsertError } = await supabase.from('government_programs').upsert({
+          client_id: tenantId,
+          nombre: data.title || programInfo.title,
+          periodo: data.period || programInfo.period,
+          territorio: data.territory || programInfo.territory,
+          estado: data.status || programInfo.status,
+          vision_general: data.historicalContext || programInfo.historicalContext,
+          updated_at: syncTimestamp
+        });
+
+        if (upsertError) throw upsertError;
+        await loadData();
       }
       return true;
     } catch (err) {
       console.error('Error updating program general info:', err);
       throw new Error('No fue posible guardar los datos generales.');
     }
-  }, [programInfo, tenantId, PROGRAM_KEY]);
+  }, [programInfo, tenantId, loadData]);
 
   // Update Historical Context
   const updateHistoricalContext = useCallback(async (text: string) => {
@@ -595,136 +415,59 @@ export function useGovernmentProgram() {
     }
 
     try {
-      const newAxisNumber = axes.length + 1;
-      const newAxis: GovStrategicAxis = {
-        id: `axis_${Date.now()}`,
-        programId: programInfo.id,
-        clientId: tenantId,
-        axisNumber: newAxisNumber,
-        name: data.name.trim(),
-        description: data.description?.trim() || '',
-        generalObjective: data.generalObjective?.trim() || '',
-        diagnosedProblem: data.diagnosedProblem?.trim() || '',
-        category: data.category?.trim() || 'Eje Estratégico',
-        iconName: data.iconName || 'Target',
-        color: data.color || '#6366f1',
-        orderIndex: axes.length,
-        status: data.status || 'ACTIVO',
-        createdAt: new Date().toISOString()
-      };
-
-      const updatedAxes = [...axes, newAxis];
-      setAxes(updatedAxes);
-      setSelectedAxisId(newAxis.id);
-      localStorage.setItem(AXES_KEY, JSON.stringify(updatedAxes));
-
       if (supabase && tenantId) {
-        try {
-          await supabase.from('gov_strategic_axes').insert([{
-            id: newAxis.id,
-            program_id: newAxis.programId,
-            client_id: newAxis.clientId,
-            axis_number: newAxis.axisNumber,
-            name: newAxis.name,
-            description: newAxis.description,
-            general_objective: newAxis.generalObjective,
-            diagnosed_problem: newAxis.diagnosedProblem,
-            category: newAxis.category,
-            icon_name: newAxis.iconName,
-            color: newAxis.color,
-            order_index: newAxis.orderIndex,
-            status: newAxis.status,
-            created_at: newAxis.createdAt
-          }]);
-        } catch (e) {
-          console.warn('Could not insert axis to DB:', e);
-        }
-      }
+        const { error } = await supabase.from('strategic_axes').insert([{
+          program_id: programInfo.id,
+          nombre: data.name.trim(),
+          descripcion: data.description?.trim() || '',
+          objetivo_principal: data.generalObjective?.trim() || '',
+          prioridad: axes.length + 1
+        }]);
 
-      return newAxis;
+        if (error) throw error;
+        await loadData();
+      }
     } catch (err: any) {
       console.error('Error creating axis:', err);
       throw new Error(err.message || 'No fue posible crear la línea estratégica.');
     }
-  }, [axes, programInfo.id, tenantId, AXES_KEY]);
+  }, [axes.length, programInfo.id, tenantId, loadData]);
 
   const updateAxis = useCallback(async (id: string, data: Partial<GovStrategicAxis>) => {
     try {
-      const updatedAxes = axes.map(a => {
-        if (a.id === id) {
-          return {
-            ...a,
-            ...data,
-            updatedAt: new Date().toISOString()
-          };
-        }
-        return a;
-      });
-
-      setAxes(updatedAxes);
-      localStorage.setItem(AXES_KEY, JSON.stringify(updatedAxes));
-
       if (supabase && tenantId) {
-        try {
-          await supabase.from('gov_strategic_axes').update({
-            name: data.name,
-            description: data.description,
-            general_objective: data.generalObjective,
-            diagnosed_problem: data.diagnosedProblem,
-            category: data.category,
-            icon_name: data.iconName,
-            color: data.color,
-            status: data.status,
-            order_index: data.orderIndex,
-            updated_at: new Date().toISOString()
-          }).eq('id', id);
-        } catch (e) {
-          console.warn('Could not update axis in DB:', e);
-        }
+        const { error } = await supabase.from('strategic_axes').update({
+          nombre: data.name,
+          descripcion: data.description,
+          objetivo_principal: data.generalObjective,
+          prioridad: data.axisNumber,
+          updated_at: new Date().toISOString()
+        }).eq('id', id);
+
+        if (error) throw error;
+        await loadData();
       }
     } catch (err: any) {
       console.error('Error updating axis:', err);
       throw new Error('No fue posible actualizar la línea estratégica.');
     }
-  }, [axes, tenantId, AXES_KEY]);
+  }, [tenantId, loadData]);
 
   const deleteAxis = useCallback(async (id: string, deleteRelatedProposals = false) => {
     try {
-      const associatedProposals = proposals.filter(p => p.axisId === id);
-      if (associatedProposals.length > 0 && !deleteRelatedProposals) {
-        throw new Error(`Esta línea estratégica tiene ${associatedProposals.length} propuesta(s) asociada(s). Confirme si desea eliminarlas.`);
-      }
-
-      const updatedAxes = axes.filter(a => a.id !== id);
-      setAxes(updatedAxes);
-      localStorage.setItem(AXES_KEY, JSON.stringify(updatedAxes));
-
-      let updatedProposals = proposals;
-      if (deleteRelatedProposals) {
-        updatedProposals = proposals.filter(p => p.axisId !== id);
-        setProposals(updatedProposals);
-        localStorage.setItem(PROPOSALS_KEY, JSON.stringify(updatedProposals));
-      }
-
-      if (selectedAxisId === id) {
-        setSelectedAxisId(updatedAxes.length > 0 ? updatedAxes[0].id : null);
-      }
-
       if (supabase && tenantId) {
-        try {
-          if (deleteRelatedProposals) {
-            await supabase.from('gov_proposals').delete().eq('axis_id', id);
-          }
-          await supabase.from('gov_strategic_axes').delete().eq('id', id);
-        } catch (e) {
-          console.warn('Could not delete axis from DB:', e);
+        if (deleteRelatedProposals) {
+          await supabase.from('proposals').delete().eq('axis_id', id);
         }
+        const { error } = await supabase.from('strategic_axes').delete().eq('id', id);
+        if (error) throw error;
+        await loadData();
       }
     } catch (err: any) {
       console.error('Error deleting axis:', err);
       throw new Error(err.message || 'No fue posible eliminar la línea estratégica.');
     }
-  }, [axes, proposals, selectedAxisId, tenantId, AXES_KEY, PROPOSALS_KEY]);
+  }, [tenantId, loadData]);
 
   // --- CRUD PROYECTOS Y PROPUESTAS ---
 
@@ -755,138 +498,64 @@ export function useGovernmentProgram() {
     }
 
     try {
-      const axisProps = proposals.filter(p => p.axisId === data.axisId);
-      const generatedCode = data.code || `PROP-${axisProps.length + 1}`;
-
-      const newProposal: GovProposal = {
-        id: `prop_${Date.now()}`,
-        axisId: data.axisId,
-        programId: programInfo.id,
-        clientId: tenantId,
-        code: generatedCode,
-        title: data.title.trim(),
-        description: data.description?.trim() || '',
-        relatedProblem: data.relatedProblem?.trim() || '',
-        objective: data.objective?.trim() || '',
-        indicatorName: data.indicatorName?.trim() || '',
-        indicatorUnit: data.indicatorUnit?.trim() || '',
-        baselineValue: data.baselineValue ?? null,
-        targetValue: data.targetValue ?? null,
-        timeframe: data.timeframe || 'CUATRIENAL',
-        estimatedBudget: data.estimatedBudget != null ? Number(data.estimatedBudget) : null,
-        currency: data.currency || 'COP',
-        priority: data.priority || 'ALTA',
-        territoryScope: data.territoryScope?.trim() || '',
-        fundingSource: data.fundingSource?.trim() || '',
-        sourceDiagnosticFicheId: data.sourceDiagnosticFicheId,
-        createdAt: new Date().toISOString()
-      };
-
-      const updatedProposals = [...proposals, newProposal];
-      setProposals(updatedProposals);
-      localStorage.setItem(PROPOSALS_KEY, JSON.stringify(updatedProposals));
-
       if (supabase && tenantId) {
-        try {
-          await supabase.from('gov_proposals').insert([{
-            id: newProposal.id,
-            axis_id: newProposal.axisId,
-            program_id: newProposal.programId,
-            client_id: newProposal.clientId,
-            code: newProposal.code,
-            title: newProposal.title,
-            description: newProposal.description,
-            related_problem: newProposal.relatedProblem,
-            objective: newProposal.objective,
-            indicator_name: newProposal.indicatorName,
-            indicator_unit: newProposal.indicatorUnit,
-            baseline_value: newProposal.baselineValue,
-            target_value: newProposal.targetValue,
-            timeframe: newProposal.timeframe,
-            estimated_budget: newProposal.estimatedBudget,
-            currency: newProposal.currency,
-            priority: newProposal.priority,
-            territory_scope: newProposal.territoryScope,
-            funding_source: newProposal.fundingSource,
-            source_diagnostic_fiche_id: newProposal.sourceDiagnosticFicheId,
-            created_at: newProposal.createdAt
-          }]);
-        } catch (e) {
-          console.warn('Could not insert proposal to DB:', e);
-        }
-      }
+        const { error } = await supabase.from('proposals').insert([{
+          axis_id: data.axisId,
+          nombre: data.title.trim(),
+          descripcion: data.description?.trim() || '',
+          problema_identificado: data.relatedProblem?.trim() || '',
+          objetivo_especifico: data.objective?.trim() || '',
+          indicador_cumplimiento: data.indicatorName?.trim() || '',
+          meta_cuantitativa: data.targetValue?.toString() || '',
+          presupuesto_estimado: data.estimatedBudget,
+          prioridad: data.priority || 'ALTA'
+        }]);
 
-      return newProposal;
+        if (error) throw error;
+        await loadData();
+      }
     } catch (err: any) {
       console.error('Error creating proposal:', err);
       throw new Error(err.message || 'No fue posible registrar la propuesta.');
     }
-  }, [proposals, programInfo.id, tenantId, PROPOSALS_KEY]);
+  }, [tenantId, loadData]);
 
   const updateProposal = useCallback(async (id: string, data: Partial<GovProposal>) => {
     try {
-      const updatedProposals = proposals.map(p => {
-        if (p.id === id) {
-          return {
-            ...p,
-            ...data,
-            updatedAt: new Date().toISOString()
-          };
-        }
-        return p;
-      });
-
-      setProposals(updatedProposals);
-      localStorage.setItem(PROPOSALS_KEY, JSON.stringify(updatedProposals));
-
       if (supabase && tenantId) {
-        try {
-          await supabase.from('gov_proposals').update({
-            title: data.title,
-            description: data.description,
-            code: data.code,
-            related_problem: data.relatedProblem,
-            objective: data.objective,
-            indicator_name: data.indicatorName,
-            indicator_unit: data.indicatorUnit,
-            baseline_value: data.baselineValue,
-            target_value: data.targetValue,
-            timeframe: data.timeframe,
-            estimated_budget: data.estimatedBudget,
-            currency: data.currency,
-            priority: data.priority,
-            territory_scope: data.territoryScope,
-            funding_source: data.fundingSource,
-            updated_at: new Date().toISOString()
-          }).eq('id', id);
-        } catch (e) {
-          console.warn('Could not update proposal in DB:', e);
-        }
+        const { error } = await supabase.from('proposals').update({
+          nombre: data.title,
+          descripcion: data.description,
+          problema_identificado: data.relatedProblem,
+          objetivo_especifico: data.objective,
+          indicador_cumplimiento: data.indicatorName,
+          meta_cuantitativa: data.targetValue?.toString(),
+          presupuesto_estimado: data.estimatedBudget,
+          prioridad: data.priority,
+          updated_at: new Date().toISOString()
+        }).eq('id', id);
+
+        if (error) throw error;
+        await loadData();
       }
     } catch (err: any) {
       console.error('Error updating proposal:', err);
       throw new Error('No fue posible actualizar la propuesta.');
     }
-  }, [proposals, tenantId, PROPOSALS_KEY]);
+  }, [tenantId, loadData]);
 
   const deleteProposal = useCallback(async (id: string) => {
     try {
-      const updatedProposals = proposals.filter(p => p.id !== id);
-      setProposals(updatedProposals);
-      localStorage.setItem(PROPOSALS_KEY, JSON.stringify(updatedProposals));
-
       if (supabase && tenantId) {
-        try {
-          await supabase.from('gov_proposals').delete().eq('id', id);
-        } catch (e) {
-          console.warn('Could not delete proposal from DB:', e);
-        }
+        const { error } = await supabase.from('proposals').delete().eq('id', id);
+        if (error) throw error;
+        await loadData();
       }
     } catch (err: any) {
       console.error('Error deleting proposal:', err);
       throw new Error('No fue posible eliminar la propuesta.');
     }
-  }, [proposals, tenantId, PROPOSALS_KEY]);
+  }, [tenantId, loadData]);
 
   // Import directly from Territorial Diagnostic MicroLocalFiche
   const importFicheAsProposal = useCallback(async (fiche: MicroLocalFiche, targetAxisId: string) => {
